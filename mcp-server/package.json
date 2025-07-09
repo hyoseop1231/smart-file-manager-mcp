@@ -1,7 +1,7 @@
 {
   "name": "smart-file-manager-mcp",
-  "version": "1.0.0",
-  "description": "MCP server for intelligent file management with semantic search and AI organization",
+  "version": "2.2.0",
+  "description": "MCP server for intelligent file management with semantic search, AI organization, and web UI dashboard",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {

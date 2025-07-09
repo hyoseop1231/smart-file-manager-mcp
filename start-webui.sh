@@ -71,7 +71,7 @@ fi
 # Start the development server
 echo "🌐 Starting Web UI development server..."
 echo ""
-echo "📍 Web UI will be available at: http://localhost:3000"
+echo "📍 Web UI will be available at: http://localhost:3002"
 echo "📍 API service is running at: http://localhost:8001"
 echo ""
 echo "🎯 Features available:"
@@ -84,5 +84,5 @@ echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""
 
-# Start the React development server
-npm start
+# Start the React development server on port 3002
+PORT=3002 npm start

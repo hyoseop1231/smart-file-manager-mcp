@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-01-09
+
+### Added
+- **🖥️ Web UI Dashboard**: Complete React-based monitoring and control interface
+  - Real-time system metrics with interactive charts (CPU, Memory, Disk)
+  - File Explorer with advanced search and batch operations
+  - Analytics page with duplicate detection and storage insights
+  - AI-powered Organization Wizard with dry-run preview
+  - Settings management for system configuration
+- **📊 Enhanced MCP Functions**: Expanded from 4 to 8 comprehensive functions
+  - `analyze_file`: Deep content analysis using AI
+  - `system_status`: Comprehensive health and performance metrics
+  - `find_duplicates`: Advanced duplicate detection with multiple methods
+  - `batch_operation`: Process multiple files in a single operation
+- **🚀 Web UI Features**:
+  - Material-UI based modern design system
+  - React Query for efficient data fetching and caching
+  - Recharts for beautiful data visualizations
+  - Real-time updates with automatic refresh
+  - Responsive design for all screen sizes
+- **🔧 Infrastructure Improvements**:
+  - Nginx reverse proxy for production deployment
+  - Port conflict detection and automatic resolution
+  - Enhanced Docker Compose configuration for web UI
+  - Development mode with hot reload support
+
+### Changed
+- Default web UI port changed from 3000 to 3002 to avoid common conflicts
+- Improved MCP server endpoint mappings for all functions
+- Enhanced error handling with detailed error messages
+- Optimized API response formats for consistency
+
+### Fixed
+- Fixed 404 errors on all MCP function calls
+- Corrected `smart_workflow` endpoint mapping from `/workflow` to `/organize`
+- Fixed `quick_search` to use proper query parameters instead of path parameters
+- Resolved TypeScript compilation errors in web UI
+- Fixed Recharts TreeMap vs Treemap import issue
+- Improved port availability checking in startup scripts
+
 ## [2.1.1] - 2025-07-09
 
 ### Fixed
@@ -140,17 +180,19 @@ This release represents a complete overhaul of the Smart File Manager MCP, with 
 
 ## Future Roadmap
 
-### Version 2.1 (Planned)
-- [ ] Web UI dashboard
-- [ ] Real-time file monitoring
-- [ ] Advanced duplicate detection algorithms
+### Version 2.3 (Planned)
+- [ ] Real-time file monitoring with WebSocket
 - [ ] Multi-language support (10+ languages)
-
-### Version 2.2 (Planned)
 - [ ] Cloud storage integration (Google Drive, Dropbox)
+- [ ] File content preview in Web UI
+- [ ] Advanced search syntax support
+
+### Version 2.4 (Planned)
 - [ ] Collaborative features
 - [ ] Mobile app support
 - [ ] Plugin system for extensibility
+- [ ] Voice command integration
+- [ ] AI model fine-tuning interface
 
 ### Version 3.0 (Planned)
 - [ ] Distributed indexing for massive file collections

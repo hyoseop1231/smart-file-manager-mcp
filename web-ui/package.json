@@ -1,7 +1,7 @@
 {
   "name": "smart-file-manager-ui",
-  "version": "1.0.0",
-  "description": "Modern Web UI for Smart File Manager MCP",
+  "version": "2.2.0",
+  "description": "Modern Web UI Dashboard for Smart File Manager MCP with real-time monitoring and AI-powered organization",
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^5.16.4",

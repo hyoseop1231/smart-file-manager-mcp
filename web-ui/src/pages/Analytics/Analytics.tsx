@@ -55,7 +55,7 @@ import {
   Cell,
   AreaChart,
   Area,
-  TreeMap,
+  Treemap,
 } from 'recharts';
 import axios from 'axios';
 

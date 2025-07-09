@@ -8,7 +8,7 @@
 
 **AI-powered file management system with native Claude Desktop integration - Transform how you manage files with natural language**
 
-An enterprise-grade intelligent file management solution featuring LLM-based organization, semantic search, real-time indexing, and seamless Claude Desktop integration through the Model Context Protocol.
+An enterprise-grade intelligent file management solution featuring LLM-based organization, semantic search, real-time indexing, web UI monitoring dashboard, and seamless Claude Desktop integration through the Model Context Protocol.
 
 ## 📋 Table of Contents
 - [Key Features](#-key-features)
@@ -39,6 +39,8 @@ An enterprise-grade intelligent file management solution featuring LLM-based org
 - **🔒 Privacy First**: 100% local processing, no external APIs
 - **📈 Scalable**: Handles millions of files with optimized performance
 - **🌐 Claude Native**: Seamless integration as default file manager
+- **🖥️ Web UI**: Modern React dashboard for monitoring and control
+- **📊 Analytics**: Real-time insights and duplicate detection
 
 ### 📊 Performance Highlights
 - **Search Speed**: 0.373s for 100 results from 114,549 files
@@ -113,6 +115,36 @@ curl http://localhost:8001/health
 # Test MCP connection (in Claude Desktop)
 "파일 검색 테스트" or "test file search"
 ```
+
+#### 4. Access Web UI (Optional)
+```bash
+# For development mode with hot reload
+./start-webui.sh
+
+# Or use Docker Compose (production mode)
+docker-compose up -d web-ui
+
+# Web UI will be available at:
+http://localhost:3002
+```
+
+### 🖥️ Web UI Dashboard
+
+The Smart File Manager includes a modern web interface for monitoring and control:
+
+#### Features
+- **📊 Real-time Dashboard**: System metrics, file activity, and performance monitoring
+- **🔍 File Explorer**: Advanced search with filters and batch operations
+- **📈 Analytics**: Duplicate detection, storage insights, and usage patterns
+- **🤖 Organization Wizard**: Step-by-step AI-guided file organization
+- **⚙️ Settings**: System configuration and directory management
+
+#### Web UI Screenshots
+- Dashboard with real-time metrics and charts
+- File explorer with advanced search capabilities
+- Analytics page showing duplicate files and potential savings
+- Organization wizard with dry-run preview
+- Settings page for system configuration
 
 ## 🎯 Usage Examples
 
@@ -256,9 +288,100 @@ Combined search and action workflows.
   "tool": "smart_workflow",
   "arguments": {
     "searchQuery": "old project files",
-    "action": "analyze",
+    "action": "organize",
     "options": {
-      "includeMetadata": true
+      "dryRun": true
+    }
+  }
+}
+```
+
+### 5. analyze_file
+Deep content analysis of specific files using AI.
+
+**Parameters:**
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| filePath | string | Yes | - | Path to file to analyze |
+| analysisType | string | No | smart | Type of analysis |
+
+**Analysis Types:** `smart`, `content`, `metadata`, `category`
+
+**Example:**
+```json
+{
+  "tool": "analyze_file",
+  "arguments": {
+    "filePath": "/Users/me/Documents/report.pdf",
+    "analysisType": "smart"
+  }
+}
+```
+
+### 6. system_status
+Get comprehensive system health and performance metrics.
+
+**Example:**
+```json
+{
+  "tool": "system_status",
+  "arguments": {}
+}
+```
+
+**Response includes:**
+- Database statistics
+- System performance metrics
+- Service health status
+- Recent activity summary
+
+### 7. find_duplicates
+Detect duplicate files using various methods.
+
+**Parameters:**
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| method | string | No | hash | Detection method |
+| minSize | number | No | 1000 | Minimum file size in bytes |
+| directories | string[] | No | All | Specific directories |
+
+**Methods:** `hash` (content), `name`, `size`
+
+**Example:**
+```json
+{
+  "tool": "find_duplicates",
+  "arguments": {
+    "method": "hash",
+    "minSize": 1048576
+  }
+}
+```
+
+### 8. batch_operation
+Process multiple files with a single operation.
+
+**Parameters:**
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| files | string[] | Yes | - | List of file paths |
+| operation | string | Yes | - | Operation to perform |
+| options | object | No | {} | Operation-specific options |
+
+**Operations:** `move`, `copy`, `tag`, `analyze`, `organize`
+
+**Example:**
+```json
+{
+  "tool": "batch_operation",
+  "arguments": {
+    "files": [
+      "/path/to/file1.pdf",
+      "/path/to/file2.pdf"
+    ],
+    "operation": "move",
+    "options": {
+      "targetDir": "/Documents/PDFs"
     }
   }
 }
@@ -729,14 +852,16 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ### Development Priorities
 
-- [ ] Web UI dashboard
+- [x] Web UI dashboard (v2.0.0)
+- [x] Advanced duplicate detection (v2.0.0)
+- [x] Batch operations (v2.0.0)
+- [x] Performance analytics (v2.0.0)
 - [ ] Multi-language support
 - [ ] Cloud storage integration
-- [ ] Advanced duplicate detection
 - [ ] File content preview
-- [ ] Batch operations UI
-- [ ] Performance analytics
 - [ ] Plugin system
+- [ ] Mobile app
+- [ ] Voice commands
 
 ## 📄 License
 
@@ -758,8 +883,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Version**: 2.0.0  
-**Last Updated**: 2025-07-09  
+**Version**: 2.2.0  
+**Last Updated**: 2025-01-09  
 **Compatibility**: Claude Desktop 1.0+, Docker 20.0+, Node.js 18+
 
 Made with ❤️ by [hyoseop1231](https://github.com/hyoseop1231)

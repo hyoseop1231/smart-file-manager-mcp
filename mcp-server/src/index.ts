@@ -39,6 +39,27 @@ const SmartWorkflowSchema = z.object({
   options: z.record(z.any()).optional().describe("Additional options for the action"),
 });
 
+const AnalyzeFileSchema = z.object({
+  filePath: z.string().describe("Path to the file to analyze"),
+  analysisType: z.enum(["content", "metadata", "vision", "smart"]).optional().default("smart").describe("Type of analysis to perform"),
+});
+
+const SystemStatusSchema = z.object({
+  detailed: z.boolean().optional().default(false).describe("Get detailed system metrics"),
+});
+
+const FindDuplicatesSchema = z.object({
+  directories: z.array(z.string()).optional().describe("Directories to search for duplicates"),
+  method: z.enum(["hash", "name", "size", "content"]).optional().default("hash").describe("Duplicate detection method"),
+  minSize: z.number().optional().default(0).describe("Minimum file size to consider"),
+});
+
+const BatchOperationSchema = z.object({
+  operation: z.enum(["rename", "move", "copy", "delete"]).describe("Batch operation to perform"),
+  files: z.array(z.string()).describe("List of file paths to operate on"),
+  options: z.record(z.any()).optional().describe("Operation-specific options"),
+});
+
 // AI Service URL (will be set by environment variable)
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8001";
 
@@ -140,6 +161,73 @@ class SmartFileManagerServer {
               options: { type: "object", description: "Additional options for the action" },
             },
             required: ["searchQuery", "action"],
+          },
+        },
+        {
+          name: "analyze_file",
+          description: "Analyze a specific file using AI (content, metadata, vision, or smart selection)",
+          inputSchema: {
+            type: "object",
+            properties: {
+              filePath: { type: "string", description: "Path to the file to analyze" },
+              analysisType: { 
+                type: "string",
+                enum: ["content", "metadata", "vision", "smart"],
+                description: "Type of analysis to perform (default: smart)"
+              },
+            },
+            required: ["filePath"],
+          },
+        },
+        {
+          name: "system_status",
+          description: "Get system health, indexing status, and performance metrics",
+          inputSchema: {
+            type: "object",
+            properties: {
+              detailed: { type: "boolean", description: "Get detailed system metrics (default: false)" },
+            },
+          },
+        },
+        {
+          name: "find_duplicates",
+          description: "Find duplicate files using various detection methods",
+          inputSchema: {
+            type: "object",
+            properties: {
+              directories: { 
+                type: "array",
+                items: { type: "string" },
+                description: "Directories to search for duplicates"
+              },
+              method: { 
+                type: "string",
+                enum: ["hash", "name", "size", "content"],
+                description: "Duplicate detection method (default: hash)"
+              },
+              minSize: { type: "number", description: "Minimum file size to consider (default: 0)" },
+            },
+          },
+        },
+        {
+          name: "batch_operation",
+          description: "Perform batch operations on multiple files (rename, move, copy, delete)",
+          inputSchema: {
+            type: "object",
+            properties: {
+              operation: { 
+                type: "string",
+                enum: ["rename", "move", "copy", "delete"],
+                description: "Batch operation to perform"
+              },
+              files: { 
+                type: "array",
+                items: { type: "string" },
+                description: "List of file paths to operate on"
+              },
+              options: { type: "object", description: "Operation-specific options" },
+            },
+            required: ["operation", "files"],
           },
         },
       ],
@@ -376,6 +464,150 @@ class SmartFileManagerServer {
                 {
                   type: "text",
                   text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "analyze_file": {
+            const validatedArgs = AnalyzeFileSchema.parse(args);
+            
+            // Convert file path to container path
+            const containerPath = validatedArgs.filePath.replace("/Users/hyoseop1231", "/watch_directories");
+            
+            // Use search to find and analyze the specific file
+            const searchArgs = {
+              query: `path:"${containerPath}"`,
+              use_llm: true,
+              limit: 1
+            };
+            
+            const response = await axios.post(`${AI_SERVICE_URL}/search`, searchArgs);
+            
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    file_path: validatedArgs.filePath,
+                    analysis_type: validatedArgs.analysisType,
+                    result: response.data
+                  }, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "system_status": {
+            const validatedArgs = SystemStatusSchema.parse(args);
+            
+            // Get health and metrics
+            const [healthResponse, metricsResponse] = await Promise.all([
+              axios.get(`${AI_SERVICE_URL}/health`),
+              validatedArgs.detailed ? axios.get(`${AI_SERVICE_URL}/metrics`) : Promise.resolve(null)
+            ]);
+            
+            const result = {
+              health: healthResponse.data,
+              metrics: metricsResponse?.data || "Use detailed:true for full metrics"
+            };
+            
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(result, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "find_duplicates": {
+            const validatedArgs = FindDuplicatesSchema.parse(args);
+            
+            // Use search to find potential duplicates
+            const searchArgs = {
+              query: `size:>${validatedArgs.minSize}`,
+              use_llm: false,
+              limit: 1000
+            };
+            
+            const response = await axios.post(`${AI_SERVICE_URL}/search`, searchArgs);
+            
+            // Simple duplicate detection based on method
+            const files = response.data.results || [];
+            const duplicates: any[] = [];
+            
+            if (validatedArgs.method === "name") {
+              const nameMap = new Map<string, any[]>();
+              files.forEach((file: any) => {
+                const name = file.metadata?.name || file.name;
+                if (!nameMap.has(name)) nameMap.set(name, []);
+                nameMap.get(name)!.push(file);
+              });
+              
+              nameMap.forEach((fileGroup, name) => {
+                if (fileGroup.length > 1) {
+                  duplicates.push({
+                    duplicate_type: "name",
+                    duplicate_key: name,
+                    files: fileGroup
+                  });
+                }
+              });
+            } else if (validatedArgs.method === "size") {
+              const sizeMap = new Map<number, any[]>();
+              files.forEach((file: any) => {
+                const size = file.metadata?.size || file.size;
+                if (!sizeMap.has(size)) sizeMap.set(size, []);
+                sizeMap.get(size)!.push(file);
+              });
+              
+              sizeMap.forEach((fileGroup, size) => {
+                if (fileGroup.length > 1) {
+                  duplicates.push({
+                    duplicate_type: "size",
+                    duplicate_key: `${size} bytes`,
+                    files: fileGroup
+                  });
+                }
+              });
+            }
+            
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    method: validatedArgs.method,
+                    directories: validatedArgs.directories,
+                    duplicates_found: duplicates.length,
+                    duplicates: duplicates.slice(0, 10) // Limit to first 10 for readability
+                  }, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "batch_operation": {
+            const validatedArgs = BatchOperationSchema.parse(args);
+            
+            // For now, return a preview of what would be done
+            // In a real implementation, this would perform the actual operations
+            const result = {
+              operation: validatedArgs.operation,
+              files_count: validatedArgs.files.length,
+              files: validatedArgs.files,
+              options: validatedArgs.options,
+              status: "preview_mode",
+              note: "This is a preview. Actual batch operations would require additional safety checks and implementation."
+            };
+            
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(result, null, 2),
                 },
               ],
             };

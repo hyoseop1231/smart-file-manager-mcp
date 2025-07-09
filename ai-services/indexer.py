@@ -23,13 +23,14 @@ class FileIndexer:
         self.db_path = db_path
         self.embeddings_path = embeddings_path
         self.metadata_path = metadata_path
+        # Get directories from environment or use defaults
         self.indexed_dirs = [
-            "/Users/hyoseop1231/Documents",
-            "/Users/hyoseop1231/Downloads", 
-            "/Users/hyoseop1231/Desktop",
-            "/Users/hyoseop1231/Pictures",
-            "/Users/hyoseop1231/Movies",
-            "/Users/hyoseop1231/Music"
+            os.environ.get("HOME_DOCUMENTS", "/watch_directories/Documents"),
+            os.environ.get("HOME_DOWNLOADS", "/watch_directories/Downloads"), 
+            os.environ.get("HOME_DESKTOP", "/watch_directories/Desktop"),
+            os.environ.get("HOME_PICTURES", "/watch_directories/Pictures"),
+            os.environ.get("HOME_MOVIES", "/watch_directories/Movies"),
+            os.environ.get("HOME_MUSIC", "/watch_directories/Music")
         ]
         
         # Initialize directories
@@ -65,9 +66,29 @@ class FileIndexer:
         # Create FTS5 virtual table for full-text search
         cursor.execute('''
             CREATE VIRTUAL TABLE IF NOT EXISTS files_fts USING fts5(
-                path, name, content, metadata,
-                content=files
+                name, path,
+                content='files',
+                content_rowid='id'
             )
+        ''')
+        
+        # Create triggers to keep FTS in sync
+        cursor.execute('''
+            CREATE TRIGGER IF NOT EXISTS files_ai AFTER INSERT ON files BEGIN
+                INSERT INTO files_fts(rowid, name, path) VALUES (new.id, new.name, new.path);
+            END
+        ''')
+        
+        cursor.execute('''
+            CREATE TRIGGER IF NOT EXISTS files_ad AFTER DELETE ON files BEGIN
+                DELETE FROM files_fts WHERE rowid = old.id;
+            END
+        ''')
+        
+        cursor.execute('''
+            CREATE TRIGGER IF NOT EXISTS files_au AFTER UPDATE ON files BEGIN
+                UPDATE files_fts SET name = new.name, path = new.path WHERE rowid = new.id;
+            END
         ''')
         
         # Index for faster queries
@@ -236,6 +257,65 @@ class FileIndexer:
             conn.commit()
             logger.info(f"Indexing complete. Indexed: {indexed_count}, Skipped: {skipped_count}")
             
+        finally:
+            conn.close()
+            
+    def index_file(self, file_path: str):
+        """Index a single file"""
+        file_path = Path(file_path)
+        
+        if not file_path.exists() or not file_path.is_file():
+            logger.warning(f"File does not exist or is not a file: {file_path}")
+            return
+            
+        if not self._should_index_file(file_path):
+            logger.debug(f"Skipping file: {file_path}")
+            return
+            
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
+        cursor = conn.cursor()
+        
+        try:
+            # Extract metadata
+            metadata = self._extract_metadata(file_path)
+            
+            # Calculate content hash
+            content_hash = self._calculate_file_hash(str(file_path))
+            
+            # Check if file already indexed and unchanged
+            cursor.execute(
+                "SELECT content_hash FROM files WHERE path = ?",
+                (str(file_path),)
+            )
+            existing = cursor.fetchone()
+            
+            if existing and existing[0] == content_hash:
+                # File unchanged, skip
+                logger.debug(f"File unchanged, skipping: {file_path}")
+                return
+                
+            # Insert or update file record
+            cursor.execute('''
+                INSERT OR REPLACE INTO files 
+                (path, name, extension, size, modified_time, 
+                 content_hash, metadata_json, indexed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                str(file_path),
+                metadata["name"],
+                metadata["extension"],
+                metadata["size"],
+                metadata["modified"],
+                content_hash,
+                json.dumps(metadata),
+                time.time()
+            ))
+            
+            conn.commit()
+            logger.debug(f"Indexed file: {file_path}")
+            
+        except Exception as e:
+            logger.error(f"Error indexing file {file_path}: {e}")
         finally:
             conn.close()
             

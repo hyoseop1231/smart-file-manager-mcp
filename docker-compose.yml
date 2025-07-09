@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Smart File Manager - Main API service with integrated scheduler
   smart-file-manager:
@@ -12,12 +10,12 @@ services:
       - "9001:9001"  # Supervisor web interface
     volumes:
       # Watch directories (customize as needed)
-      - ${HOME}/Documents:/watch_directories/Documents:ro
-      - ${HOME}/Downloads:/watch_directories/Downloads:ro
-      - ${HOME}/Desktop:/watch_directories/Desktop:ro
-      - ${HOME}/Pictures:/watch_directories/Pictures:ro
-      - ${HOME}/Movies:/watch_directories/Movies:ro
-      - ${HOME}/Music:/watch_directories/Music:ro
+      - ${HOME_DOCUMENTS:-/Users/hyoseop1231/Documents}:/watch_directories/Documents:ro
+      - ${HOME_DOWNLOADS:-/Users/hyoseop1231/Downloads}:/watch_directories/Downloads:ro
+      - ${HOME_DESKTOP:-/Users/hyoseop1231/Desktop}:/watch_directories/Desktop:ro
+      - ${HOME_PICTURES:-/Users/hyoseop1231/Pictures}:/watch_directories/Pictures:ro
+      - ${HOME_MOVIES:-/Users/hyoseop1231/Movies}:/watch_directories/Movies:ro
+      - ${HOME_MUSIC:-/Users/hyoseop1231/Music}:/watch_directories/Music:ro
       # Persistent data storage
       - smart_file_data:/data/db
       - smart_file_embeddings:/data/embeddings
@@ -30,11 +28,17 @@ services:
       - METADATA_PATH=/data/metadata
       - OLLAMA_API_URL=http://host.docker.internal:11434/api/generate
       - WATCH_DIRECTORIES=/watch_directories
+      - HOME_DOCUMENTS=/watch_directories/Documents
+      - HOME_DOWNLOADS=/watch_directories/Downloads
+      - HOME_DESKTOP=/watch_directories/Desktop
+      - HOME_PICTURES=/watch_directories/Pictures
+      - HOME_MOVIES=/watch_directories/Movies
+      - HOME_MUSIC=/watch_directories/Music
       - FULL_INDEXING_INTERVAL=7200  # 2 hours
       - QUICK_INDEXING_INTERVAL=1800  # 30 minutes
       - CLEANUP_INTERVAL=86400  # 24 hours
-    depends_on:
-      - ollama
+    # depends_on:
+    #   - ollama
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
@@ -43,25 +47,25 @@ services:
       retries: 3
       start_period: 30s
 
-  # Ollama LLM service
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    environment:
-      - OLLAMA_HOST=0.0.0.0
-    restart: unless-stopped
-    # GPU support (comment out if no GPU)
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+  # Ollama LLM service - Using host's Ollama instead
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: ollama
+  #   ports:
+  #     - "11435:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   environment:
+  #     - OLLAMA_HOST=0.0.0.0
+  #   restart: unless-stopped
+  #   # GPU support (comment out if no GPU available)
+  #   # deploy:
+  #   #   resources:
+  #   #     reservations:
+  #   #       devices:
+  #   #         - driver: nvidia
+  #   #           count: 1
+  #   #           capabilities: [gpu]
 
   # MCP Server for Claude Desktop integration
   mcp-server:
@@ -84,8 +88,8 @@ volumes:
     driver: local
   smart_file_metadata:
     driver: local
-  ollama_data:
-    driver: local
+  # ollama_data:
+  #   driver: local
 
 networks:
   default:

@@ -133,3 +133,64 @@ test_files/
 
 # LaunchAgent plist files (user-specific)
 *.plist
+
+# Test and debug files
+test_*.py
+debug_*.py
+*_test.py
+check_*.py
+clear_*.py
+fix_*.py
+manual_*.py
+populate_*.py
+enable_*.py
+enhanced_api_fixed.py
+
+# Generated files
+claude_desktop_config_snippet.json
+*.png
+*.xlsx
+*.csv
+*.html
+*.pptx
+presentation_content.md
+*_presentation.json
+*_dashboard.png
+*_analysis_dashboard.png
+*_key_insights.csv
+*_mermaid_charts.html
+*_smart_manufacturing_data.xlsx
+
+# Local documentation (not for repo)
+CLAUDE_DESKTOP_SETUP.md
+COMPREHENSIVE_TEST_RESULTS.md
+DEBUG_TEST.md
+FIXED_422_ERROR.md
+USAGE_PROMPTS.md
+
+# Korean files (project specific)
+뿌리산업_*.md
+뿌리산업_*.pptx
+이해관계자별_*.md
+
+# Build scripts
+rebuild_all.sh
+create_ppt.py
+
+# MCP server dist (built locally)
+mcp-server/dist/
+
+# Docker volumes
+smart_file_data/
+smart_file_embeddings/
+smart_file_metadata/
+
+# Database connection pool (generated)
+ai-services/db_connection_pool.py
+ai-services/embedding_manager.py
+ai-services/performance_monitor.py
+
+# But keep important structure files
+!.gitkeep
+!docs/
+!mcp-server/src/

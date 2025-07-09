@@ -18,7 +18,15 @@ from smart_model_selector import SmartModelSelector
 logger = logging.getLogger(__name__)
 
 class LLMOrganizer:
-    def __init__(self, ollama_url: str = "http://localhost:11434"):
+    def __init__(self, ollama_url: str = None):
+        # Use environment variable or default to host's Ollama
+        if ollama_url is None:
+            ollama_url = os.environ.get("OLLAMA_API_URL", "http://host.docker.internal:11434/api/generate")
+        # Ensure we have the base URL without /api/generate for other calls
+        if "/api/generate" in ollama_url:
+            self.ollama_base_url = ollama_url.replace("/api/generate", "")
+        else:
+            self.ollama_base_url = ollama_url
         self.ollama_url = ollama_url
         self.text_model = "llama3.2:3b"  # For text analysis (lightweight & fast)
         self.vision_model = "llava:13b"   # For image analysis
@@ -99,7 +107,7 @@ Respond in JSON format:
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{self.ollama_url}/api/generate",
+                    self.ollama_url,
                     json={
                         "model": self.text_model,
                         "prompt": prompt,
@@ -131,7 +139,7 @@ Respond in JSON format."""
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{self.ollama_url}/api/generate",
+                    self.ollama_url,
                     json={
                         "model": self.vision_model,
                         "prompt": prompt,
@@ -282,43 +290,175 @@ Respond in JSON format."""
         
     async def smart_search(self, query: str, directories: List[str]) -> List[Dict[str, Any]]:
         """Smart search using LLM to understand query intent"""
-        # Analyze query with LLM
+        logger.info(f"Smart search initiated for query: {query}")
+        
+        # First try direct fallback for immediate results
+        try:
+            keywords = self._extract_keywords_fallback(query)
+            logger.info(f"Extracted keywords: {keywords}")
+            
+            # Try simple search first
+            simple_results = await self._perform_smart_search({"keywords": keywords}, directories)
+            if simple_results:
+                logger.info(f"Direct search returned {len(simple_results)} results")
+                return simple_results
+        except Exception as e:
+            logger.error(f"Direct search error: {e}")
+        
+        # Then try LLM analysis
         prompt = f"""Analyze this search query and extract:
-1. File types to search for
-2. Keywords to match
-3. Likely categories
+1. File types to search for (e.g., [".pdf", ".docx", ".txt"])
+2. Keywords to match (important words from the query)
+3. Likely categories (document, image, video, audio, code, archive, other)
 4. Date range if mentioned
 
 Query: {query}
 
-Respond in JSON format."""
+Respond ONLY with valid JSON like this example:
+{{
+    "file_types": [".pdf", ".docx"],
+    "keywords": ["project", "report"],
+    "categories": ["document"],
+    "date_range": null
+}}"""
 
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{self.ollama_url}/api/generate",
+                    self.ollama_url,
                     json={
                         "model": self.text_model,
                         "prompt": prompt,
                         "stream": False,
                         "format": "json"
-                    }
+                    },
+                    timeout=aiohttp.ClientTimeout(total=10)
                 ) as resp:
-                    result = await resp.json()
-                    search_params = json.loads(result.get("response", "{}"))
-                    
-            # Use search parameters to find files
-            # This would integrate with the existing search functionality
-            return await self._perform_smart_search(search_params, directories)
-            
+                    if resp.status == 200:
+                        result = await resp.json()
+                        search_params = json.loads(result.get("response", "{}"))
+                        logger.info(f"LLM search params: {search_params}")
+                        
+                        # Use search parameters to find files
+                        llm_results = await self._perform_smart_search(search_params, directories)
+                        if llm_results:
+                            return llm_results
+                    else:
+                        logger.warning(f"LLM request failed with status {resp.status}")
+                        
         except Exception as e:
-            logger.error(f"Smart search error: {e}")
-            # Fallback to basic search
+            logger.error(f"LLM search error: {e}")
+            
+        # Final fallback - return simple results or empty
+        try:
+            keywords = self._extract_keywords_fallback(query)
+            return await self._perform_smart_search({"keywords": keywords}, directories)
+        except Exception as e2:
+            logger.error(f"Final fallback search error: {e2}")
             return []
             
     async def _perform_smart_search(self, params: Dict[str, Any], 
                                   directories: List[str]) -> List[Dict[str, Any]]:
         """Perform search based on LLM-analyzed parameters"""
-        # This would integrate with the vector database search
-        # For now, return placeholder
-        return []
+        logger.info(f"Performing smart search with params: {params}")
+        
+        # Import db_manager locally to avoid circular import
+        from db_manager import DatabaseManager
+        
+        try:
+            db_manager = DatabaseManager(os.environ.get("DB_PATH", "/data/db/file-index.db"))
+            
+            # Extract search parameters from LLM analysis
+            keywords = params.get("keywords", [])
+            file_types = params.get("file_types", [])
+            categories = params.get("categories", [])
+            
+            logger.info(f"Search parameters - Keywords: {keywords}, Types: {file_types}, Categories: {categories}")
+            
+            results = []
+            
+            # Try multiple search strategies
+            if keywords:
+                # Strategy 1: Search with all keywords combined
+                combined_query = " ".join(keywords)
+                logger.info(f"Searching with combined query: {combined_query}")
+                combined_results = db_manager.search_files(combined_query, directories, limit=30)
+                results.extend(combined_results)
+                
+                # Strategy 2: Search with each keyword separately
+                for keyword in keywords:
+                    logger.info(f"Searching with individual keyword: {keyword}")
+                    keyword_results = db_manager.search_files(keyword, directories, limit=20)
+                    results.extend(keyword_results)
+                    
+            # If we have file types, also search by extension
+            if file_types:
+                for file_type in file_types:
+                    ext_query = file_type.replace(".", "")
+                    logger.info(f"Searching by extension: {ext_query}")
+                    ext_results = db_manager.search_files(ext_query, directories, limit=20)
+                    results.extend(ext_results)
+                    
+            # Remove duplicates based on path
+            seen_paths = set()
+            unique_results = []
+            for result in results:
+                if result and result.get('path') and result['path'] not in seen_paths:
+                    seen_paths.add(result['path'])
+                    unique_results.append(result)
+                    
+            # Apply filters
+            filtered_results = unique_results
+            
+            # Filter by file types if specified
+            if file_types:
+                temp_results = []
+                for result in filtered_results:
+                    ext = result.get("metadata", {}).get("extension", "").lower()
+                    if any(ft.lower() in ext for ft in file_types):
+                        temp_results.append(result)
+                filtered_results = temp_results
+                
+            # Filter by categories if specified
+            if categories:
+                temp_results = []
+                for result in filtered_results:
+                    cat = result.get("metadata", {}).get("category", "").lower()
+                    if any(c.lower() in cat for c in categories):
+                        temp_results.append(result)
+                filtered_results = temp_results
+                
+            logger.info(f"Search completed: {len(filtered_results)} results found")
+            return filtered_results[:50]  # Limit to top 50 results
+            
+        except Exception as e:
+            logger.error(f"Smart search error: {e}")
+            return []
+    
+    def _extract_keywords_fallback(self, query: str) -> List[str]:
+        """Extract keywords from query when LLM is unavailable"""
+        import re
+        
+        # Remove common stop words
+        stop_words = {
+            'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+            'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had',
+            'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might',
+            'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they',
+            '그', '이', '저', '것', '는', '은', '이', '가', '을', '를', '에', '서', '로', '와', '과',
+            '파일', '문서', '찾아', '검색', '보여', '주세요', '해주세요', '있는', '없는'
+        }
+        
+        # Clean and split query
+        query = query.lower()
+        query = re.sub(r'[^\w\s]', ' ', query)  # Remove punctuation
+        words = query.split()
+        
+        # Filter out stop words and short words
+        keywords = [word for word in words if len(word) > 2 and word not in stop_words]
+        
+        # If no keywords found, return original words
+        if not keywords:
+            keywords = [word for word in words if len(word) > 1]
+            
+        return keywords[:5]  # Limit to top 5 keywords

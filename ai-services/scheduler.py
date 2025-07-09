@@ -86,14 +86,17 @@ class SmartFileScheduler:
         
         try:
             # Quick indexing: only files modified in last 2 hours
-            recent_files = self.file_indexer.get_recent_files(hours=2)
+            recent_files = self.db_manager.get_recent_files(hours=2, limit=1000)
             
             if recent_files:
                 indexed_count = 0
-                for file_path in recent_files:
+                for file_info in recent_files:
                     try:
-                        self.file_indexer.index_file(file_path)
-                        indexed_count += 1
+                        file_path = file_info.get('path')
+                        if file_path and os.path.exists(file_path):
+                            # Re-index the file to update metadata
+                            self.file_indexer.index_file(file_path)
+                            indexed_count += 1
                     except Exception as e:
                         logger.warning(f"Failed to index {file_path}: {e}")
                 
@@ -116,11 +119,21 @@ class SmartFileScheduler:
         start_time = time.time()
         
         try:
-            # Clean up orphaned records
-            self.db_manager.cleanup_orphaned_records()
+            # Clean expired cache entries
+            self.file_indexer.clean_cache()
             
-            # Optimize database
-            self.db_manager.optimize_database()
+            # Run basic SQLite optimization
+            import sqlite3
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # VACUUM to reclaim unused space
+            cursor.execute("VACUUM")
+            
+            # Analyze to update statistics
+            cursor.execute("ANALYZE")
+            
+            conn.close()
             
             elapsed = time.time() - start_time
             logger.info(f"✅ Database cleanup completed in {elapsed:.1f}s")

@@ -8,6 +8,8 @@ import hashlib
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import logging
+from db_connection_pool import get_db_connection
+from performance_monitor import get_performance_monitor
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +17,30 @@ class DatabaseManager:
     def __init__(self, db_path: str, cache_ttl: int = 3600):
         self.db_path = db_path
         self.cache_ttl = cache_ttl  # Cache time-to-live in seconds
+        self._setup_database()
+        
+    def _get_connection(self):
+        """Get optimized database connection"""
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA cache_size=10000")
+        conn.execute("PRAGMA temp_store=MEMORY")
+        conn.execute("PRAGMA foreign_keys=ON")
+        conn.row_factory = sqlite3.Row
+        return conn
+        
+    def _setup_database(self):
+        """Setup database with optimizations"""
+        conn = self._get_connection()
+        try:
+            # Enable WAL mode
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.commit()
+        except Exception as e:
+            logger.warning(f"Database setup warning: {e}")
+        finally:
+            conn.close()
         
     def _escape_fts_query(self, query: str) -> str:
         """Escape special characters for FTS5 queries"""
@@ -31,107 +57,107 @@ class DatabaseManager:
     def search_files(self, query: str, directories: Optional[List[str]] = None, 
                     limit: int = 10) -> List[Dict[str, Any]]:
         """Search files using indexed database"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        monitor = get_performance_monitor()
+        start_time = time.time()
         
         try:
-            # Check cache first
-            query_hash = hashlib.md5(f"{query}{directories}{limit}".encode()).hexdigest()
-            
-            cursor.execute("""
-                SELECT results FROM query_cache 
-                WHERE query_hash = ? AND expires_at > ?
-            """, (query_hash, time.time()))
-            
-            cached = cursor.fetchone()
-            if cached:
-                logger.info(f"Cache hit for query: {query}")
-                return json.loads(cached['results'])
-            
-            # Build search query
-            sql_parts = []
-            params = []
-            
-            # Use FTS5 for text search
-            if query:
-                # Escape special characters for FTS5
-                escaped_query = self._escape_fts_query(query)
-                sql_parts.append("""
-                    SELECT f.*, 
-                           highlight(files_fts, 1, '<mark>', '</mark>') as highlighted_name,
-                           snippet(files_fts, 2, '<mark>', '</mark>', '...', 20) as snippet,
-                           rank as fts_rank
-                    FROM files f
-                    JOIN files_fts ON f.path = files_fts.path
-                    WHERE files_fts MATCH ?
-                """)
-                params.append(escaped_query)
-            else:
-                sql_parts.append("SELECT * FROM files f WHERE 1=1")
-            
-            # Filter by directories
-            if directories:
-                placeholders = ','.join(['?' for _ in directories])
-                sql_parts.append(f"AND f.path IN ({placeholders})")
-                params.extend(directories)
-            
-            # Add ordering and limit
-            sql_parts.append("ORDER BY f.modified_time DESC")
-            sql_parts.append(f"LIMIT {limit}")
-            
-            # Execute search
-            sql = ' '.join(sql_parts)
-            cursor.execute(sql, params)
-            
-            results = []
-            for row in cursor.fetchall():
-                result = {
-                    'path': row['path'],
-                    'name': row['name'],
-                    'size': row['size'],
-                    'modified': row['modified_time'],
-                    'metadata': json.loads(row['metadata_json']) if row['metadata_json'] else {},
-                    'score': 1.0  # Can be improved with relevance scoring
-                }
+            with get_db_connection(self.db_path) as conn:
+                cursor = conn.cursor()
                 
-                # Add highlights if available
-                if 'highlighted_name' in row.keys():
-                    result['highlighted_name'] = row['highlighted_name']
-                if 'snippet' in row.keys():
-                    result['snippet'] = row['snippet']
+                monitor.increment_counter("db_queries")
+                
+                # Check cache first
+                query_hash = hashlib.md5(f"{query}{directories}{limit}".encode()).hexdigest()
+                
+                cursor.execute("""
+                    SELECT results FROM query_cache 
+                    WHERE query_hash = ? AND expires_at > ?
+                """, (query_hash, time.time()))
+                
+                cached = cursor.fetchone()
+                if cached:
+                    logger.info(f"Cache hit for query: {query}")
+                    return json.loads(cached['results'])
+                
+                # Build search query
+                sql_parts = []
+                params = []
+                
+                # Use FTS5 for text search
+                if query:
+                    # Escape special characters for FTS5
+                    escaped_query = self._escape_fts_query(query)
+                    sql_parts.append("""
+                        SELECT f.*, 
+                               highlight(files_fts, 0, '<mark>', '</mark>') as highlighted_name,
+                               snippet(files_fts, 0, '<mark>', '</mark>', '...', 20) as snippet
+                        FROM files f
+                        JOIN files_fts ON f.id = files_fts.rowid
+                        WHERE files_fts MATCH ?
+                    """)
+                    params.append(escaped_query)
+                else:
+                    sql_parts.append("SELECT * FROM files f WHERE 1=1")
+                
+                # Filter by directories
+                if directories:
+                    placeholders = ','.join(['?' for _ in directories])
+                    sql_parts.append(f"AND f.path IN ({placeholders})")
+                    params.extend(directories)
+                
+                # Add ordering and limit
+                sql_parts.append("ORDER BY f.modified_time DESC")
+                sql_parts.append(f"LIMIT {limit}")
+                
+                # Execute search
+                sql = ' '.join(sql_parts)
+                cursor.execute(sql, params)
+                
+                results = []
+                for row in cursor.fetchall():
+                    result = {
+                        'path': row['path'],
+                        'name': row['name'],
+                        'size': row['size'],
+                        'modified': row['modified_time'],
+                        'metadata': json.loads(row['metadata_json']) if row['metadata_json'] else {},
+                        'score': 1.0  # Can be improved with relevance scoring
+                    }
                     
-                results.append(result)
-            
-            # Cache results
-            cursor.execute("""
-                INSERT OR REPLACE INTO query_cache 
-                (query_hash, query, results, created_at, expires_at)
-                VALUES (?, ?, ?, ?, ?)
-            """, (
-                query_hash,
-                query,
-                json.dumps(results),
-                time.time(),
-                time.time() + self.cache_ttl
-            ))
-            
-            conn.commit()
-            return results
+                    # Add highlights if available
+                    if 'highlighted_name' in row.keys():
+                        result['highlighted_name'] = row['highlighted_name']
+                    if 'snippet' in row.keys():
+                        result['snippet'] = row['snippet']
+                        
+                    results.append(result)
+                
+                # Cache results only if we found something
+                if results:
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO query_cache 
+                        (query_hash, query, results, created_at, expires_at)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (
+                        query_hash,
+                        query,
+                        json.dumps(results),
+                        time.time(),
+                        time.time() + self.cache_ttl
+                    ))
+                
+                conn.commit()
+                return results
             
         except Exception as e:
             logger.error(f"Database search error: {e}")
             raise
-        finally:
-            conn.close()
             
     def get_file_by_path(self, file_path: str) -> Optional[Dict[str, Any]]:
         """Get file information by path"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        try:
+        with get_db_connection(self.db_path) as conn:
+            cursor = conn.cursor()
+            
             cursor.execute("""
                 SELECT * FROM files WHERE path = ?
             """, (file_path,))
@@ -148,16 +174,12 @@ class DatabaseManager:
                 }
             return None
             
-        finally:
-            conn.close()
             
     def search_by_category(self, category: str, limit: int = 50) -> List[Dict[str, Any]]:
         """Search files by category"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        try:
+        with get_db_connection(self.db_path) as conn:
+            cursor = conn.cursor()
+            
             cursor.execute("""
                 SELECT * FROM files 
                 WHERE json_extract(metadata_json, '$.category') = ?
@@ -177,16 +199,12 @@ class DatabaseManager:
                 
             return results
             
-        finally:
-            conn.close()
             
     def search_by_extension(self, extensions: List[str], limit: int = 50) -> List[Dict[str, Any]]:
         """Search files by extension"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        try:
+        with get_db_connection(self.db_path) as conn:
+            cursor = conn.cursor()
+            
             placeholders = ','.join(['?' for _ in extensions])
             cursor.execute(f"""
                 SELECT * FROM files 
@@ -207,16 +225,12 @@ class DatabaseManager:
                 
             return results
             
-        finally:
-            conn.close()
             
     def get_recent_files(self, hours: int = 24, limit: int = 50) -> List[Dict[str, Any]]:
         """Get recently modified files"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        try:
+        with get_db_connection(self.db_path) as conn:
+            cursor = conn.cursor()
+            
             since = time.time() - (hours * 3600)
             
             cursor.execute("""
@@ -238,8 +252,6 @@ class DatabaseManager:
                 
             return results
             
-        finally:
-            conn.close()
             
     def get_stats(self) -> Dict[str, Any]:
         """Get database statistics"""
@@ -281,11 +293,9 @@ class DatabaseManager:
     
     def find_duplicates(self) -> List[Dict[str, Any]]:
         """Find duplicate files based on size and name"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        try:
+        with get_db_connection(self.db_path) as conn:
+            cursor = conn.cursor()
+            
             cursor.execute("""
                 SELECT name, size, COUNT(*) as count, GROUP_CONCAT(path) as paths
                 FROM files 
@@ -308,16 +318,12 @@ class DatabaseManager:
             
             return duplicates
             
-        finally:
-            conn.close()
     
     def get_large_files(self, min_size_mb: int = 100) -> List[Dict[str, Any]]:
         """Get files larger than specified size"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        try:
+        with get_db_connection(self.db_path) as conn:
+            cursor = conn.cursor()
+            
             min_size_bytes = min_size_mb * 1024 * 1024
             cursor.execute("""
                 SELECT * FROM files 
@@ -339,16 +345,12 @@ class DatabaseManager:
             
             return results
             
-        finally:
-            conn.close()
     
     def get_old_files(self, days: int = 365) -> List[Dict[str, Any]]:
         """Get files older than specified days"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        try:
+        with get_db_connection(self.db_path) as conn:
+            cursor = conn.cursor()
+            
             cutoff_time = time.time() - (days * 24 * 3600)
             cursor.execute("""
                 SELECT * FROM files 
@@ -370,16 +372,12 @@ class DatabaseManager:
             
             return results
             
-        finally:
-            conn.close()
     
     def get_temp_files(self) -> List[Dict[str, Any]]:
         """Get temporary files that can be cleaned up"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        try:
+        with get_db_connection(self.db_path) as conn:
+            cursor = conn.cursor()
+            
             temp_patterns = ['%.tmp', '%.temp', '%~$%', '%.bak', '%.old', '%.log']
             temp_dirs = ['%/tmp/%', '%/temp/%', '%/.cache/%', '%/Downloads/%']
             
@@ -417,16 +415,12 @@ class DatabaseManager:
             
             return results
             
-        finally:
-            conn.close()
     
     def get_empty_files(self) -> List[Dict[str, Any]]:
         """Get empty files (0 bytes)"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        try:
+        with get_db_connection(self.db_path) as conn:
+            cursor = conn.cursor()
+            
             cursor.execute("""
                 SELECT * FROM files 
                 WHERE size = 0
@@ -445,6 +439,3 @@ class DatabaseManager:
                 })
             
             return results
-            
-        finally:
-            conn.close()

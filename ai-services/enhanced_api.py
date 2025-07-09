@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 """
 Enhanced AI Service with MAFM Multi-Agent + Local-File-Organizer features
-Uses Ollama for local LLM processing
+Uses Ollama for local LLM processing - FIXED VERSION
 """
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Body, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 import os
 import time
 import json
 import logging
 import asyncio
+import sqlite3
 from pathlib import Path
 from datetime import datetime
 
@@ -20,8 +24,10 @@ from llm_organizer import LLMOrganizer
 from enhanced_llm_organizer import EnhancedLLMOrganizer
 from indexer import FileIndexer
 from db_manager import DatabaseManager
+from embedding_manager import EmbeddingManager
+from performance_monitor import get_performance_monitor
 
-app = FastAPI(title="Smart File Manager AI Service - Enhanced")
+app = FastAPI(title="Smart File Manager AI Service - Enhanced & Fixed")
 
 # CORS 설정
 app.add_middleware(
@@ -32,109 +38,369 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Custom exception handler for better debugging
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.error(f"Validation error for {request.method} {request.url}")
+    logger.error(f"Request body: {await request.body()}")
+    logger.error(f"Validation errors: {exc.errors()}")
+    
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content=jsonable_encoder({
+            "detail": exc.errors(),
+            "body": exc.body,
+            "message": "Request validation failed - check field names and types",
+            "url": str(request.url),
+            "method": request.method
+        }),
+    )
+
+# Request debugging middleware
+@app.middleware("http")
+async def debug_request_middleware(request: Request, call_next):
+    if request.method == "POST":
+        body = await request.body()
+        logger.info(f"POST request to {request.url}")
+        logger.info(f"Headers: {dict(request.headers)}")
+        logger.info(f"Body: {body.decode() if body else 'Empty'}")
+        # Re-create request for further processing
+        request._body = body
+    
+    response = await call_next(request)
+    return response
+
 # Initialize components
 llm_organizer = LLMOrganizer()
 enhanced_llm_organizer = EnhancedLLMOrganizer()
-db_manager = DatabaseManager("/tmp/smart-file-manager/db/file-index.db")
-file_indexer = FileIndexer("/tmp/smart-file-manager/db/file-index.db", 
-                          "/tmp/smart-file-manager/embeddings", 
-                          "/tmp/smart-file-manager/metadata")
+
+# Get paths from environment variables
+db_path = os.environ.get("DB_PATH", "/tmp/smart-file-manager/db/file-index.db")
+embeddings_path = os.environ.get("EMBEDDINGS_PATH", "/tmp/smart-file-manager/embeddings")
+metadata_path = os.environ.get("METADATA_PATH", "/tmp/smart-file-manager/metadata")
+
+db_manager = DatabaseManager(db_path)
+file_indexer = FileIndexer(db_path, embeddings_path, metadata_path)
+embedding_manager = EmbeddingManager(embeddings_path=embeddings_path)
 
 # Global state for background tasks
-background_tasks = {}
+background_tasks_dict = {}
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Request models
+# Request models - Fixed version with proper Pydantic V2 syntax and MCP compatibility
 class SearchRequest(BaseModel):
-    query: str
-    directories: Optional[List[str]] = None
-    language: Optional[str] = "ko"
-    limit: Optional[int] = 10
-    use_llm: Optional[bool] = True  # Enable LLM-enhanced search
+    query: str = Field(..., description="Search query in natural language")
+    directories: Optional[List[str]] = Field(default_factory=list, description="Directories to search in")
+    language: Optional[str] = Field(default="ko", description="Language for search")
+    limit: Optional[int] = Field(default=10, description="Maximum number of results")
+    use_llm: Optional[bool] = Field(default=True, description="Enable LLM-enhanced search")
+    
+    # MCP-specific fields that might be required
+    args: Optional[List[Any]] = Field(default_factory=list, description="Additional arguments for MCP compatibility")
+    kwargs: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional keyword arguments for MCP compatibility")
+    
+    class Config:
+        # Allow extra fields that might be sent by MCP client
+        extra = "allow"
 
 class OrganizeRequest(BaseModel):
-    sourceDir: str
-    targetDir: Optional[str] = None
-    method: str = "content"  # content, date, type
-    dryRun: Optional[bool] = False
-    use_llm: Optional[bool] = True  # Use LLM for categorization
+    sourceDir: str = Field(..., description="Source directory to organize")
+    targetDir: Optional[str] = Field(default=None, description="Target directory for organized files")
+    method: str = Field(default="content", description="Organization method")
+    dryRun: Optional[bool] = Field(default=False, description="Preview mode without actual changes")
+    use_llm: Optional[bool] = Field(default=True, description="Use LLM for categorization")
+    
+    # MCP-specific fields
+    args: Optional[List[Any]] = Field(default_factory=list, description="Additional arguments for MCP compatibility")
+    kwargs: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional keyword arguments for MCP compatibility")
+    
+    class Config:
+        extra = "allow"
 
 class WorkflowRequest(BaseModel):
-    searchQuery: str
-    action: str  # organize, analyze, rename, index
-    options: Optional[Dict[str, Any]] = {}
+    searchQuery: str = Field(..., description="Search query to find files")
+    action: str = Field(..., description="Action to perform on found files")
+    options: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional options")
+    
+    # MCP-specific fields
+    args: Optional[List[Any]] = Field(default_factory=list, description="Additional arguments for MCP compatibility")
+    kwargs: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional keyword arguments for MCP compatibility")
+    
+    class Config:
+        extra = "allow"
 
 class IndexRequest(BaseModel):
-    directories: Optional[List[str]] = None
-    force: Optional[bool] = False
+    directories: Optional[List[str]] = Field(default_factory=list, description="Directories to index")
+    force: Optional[bool] = Field(default=False, description="Force reindexing")
+    
+    # MCP-specific fields
+    args: Optional[List[Any]] = Field(default_factory=list, description="Additional arguments for MCP compatibility")
+    kwargs: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional keyword arguments for MCP compatibility")
+    
+    class Config:
+        extra = "allow"
+
+class EmbeddingRequest(BaseModel):
+    batch_size: Optional[int] = Field(default=100, description="Batch size for processing")
+    file_types: Optional[List[str]] = Field(default_factory=list, description="File types to process")
+    
+    # MCP-specific fields
+    args: Optional[List[Any]] = Field(default_factory=list, description="Additional arguments for MCP compatibility")
+    kwargs: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional keyword arguments for MCP compatibility")
+    
+    class Config:
+        extra = "allow"
+
+@app.get("/test-db")
+async def test_db():
+    """Test database connectivity"""
+    import sqlite3
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Test basic query
+        cursor.execute("SELECT COUNT(*) FROM files")
+        file_count = cursor.fetchone()[0]
+        
+        # Test FTS query
+        cursor.execute("SELECT COUNT(*) FROM files_fts WHERE files_fts MATCH 'pdf'")
+        pdf_count = cursor.fetchone()[0]
+        
+        conn.close()
+        
+        return {
+            "db_path": db_path,
+            "total_files": file_count,
+            "pdf_matches": pdf_count
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.get("/health")
 async def health_check():
-    """Enhanced health check with Ollama status"""
+    """Enhanced health check with Ollama status and performance metrics"""
+    monitor = get_performance_monitor()
+    
     ollama_status = "unavailable"
     try:
         import aiohttp
         async with aiohttp.ClientSession() as session:
-            async with session.get("http://localhost:11434/api/tags") as resp:
+            ollama_base = os.environ.get("OLLAMA_API_URL", "http://host.docker.internal:11434/api/generate")
+            # Extract base URL for health check
+            if "/api/generate" in ollama_base:
+                ollama_health_url = ollama_base.replace("/api/generate", "/api/tags")
+            else:
+                ollama_health_url = f"{ollama_base}/api/tags"
+            
+            async with session.get(ollama_health_url, timeout=aiohttp.ClientTimeout(total=5)) as resp:
                 if resp.status == 200:
-                    ollama_status = "available"
-    except:
+                    data = await resp.json()
+                    if data.get("models"):
+                        ollama_status = "available"
+    except Exception as e:
+        logger.debug(f"Ollama health check failed: {e}")
         pass
         
     stats = file_indexer.get_stats()
+    health_status = monitor.get_health_status()
     
     return {
-        "status": "healthy",
+        "status": health_status["status"],
         "services": {
             "database": "healthy",
             "indexer": "available",
             "llm_organizer": "available",
             "ollama": ollama_status,
-            "vectordb": "planned"  # For future Milvus integration
+            "vectordb": "planned"
         },
         "db_stats": stats,
-        "background_tasks": len(background_tasks)
+        "background_tasks": len(background_tasks_dict),
+        "performance": {
+            "system_metrics": health_status["system_metrics"],
+            "issues": health_status["issues"]
+        }
     }
 
-@app.post("/search")
-async def search_files(request: SearchRequest):
-    """Enhanced search with LLM understanding"""
+@app.get("/metrics")
+async def get_metrics():
+    """Get comprehensive system metrics"""
+    monitor = get_performance_monitor()
+    return monitor.get_metrics_summary()
+
+@app.get("/metrics/database")
+async def get_database_metrics():
+    """Get database-specific metrics"""
+    monitor = get_performance_monitor()
+    return monitor.get_database_metrics()
+
+@app.get("/metrics/health")
+async def get_health_metrics():
+    """Get health status metrics"""
+    monitor = get_performance_monitor()
+    return monitor.get_health_status()
+
+# FIXED: Primary search endpoint using raw request handling to avoid validation issues
+@app.post("/search_raw")
+async def search_files_raw(request: Request):
+    """Enhanced search with LLM understanding and vector search - FIXED VERSION"""
+    monitor = get_performance_monitor()
+    start_time = time.time()
+    
     try:
-        if request.use_llm and request.query:
-            # Use LLM to understand query intent
-            results = await llm_organizer.smart_search(
-                request.query,
-                request.directories or []
-            )
-            
-            # Fallback to database search if LLM search returns nothing
-            if not results:
-                results = db_manager.search_files(
-                    request.query,
-                    request.directories,
-                    request.limit
+        monitor.increment_counter("search_requests")
+        
+        # Parse the request body manually to avoid validation issues
+        body = await request.body()
+        request_data = json.loads(body) if body else {}
+        
+        logger.info(f"Raw request data: {request_data}")
+        
+        # Extract parameters with defaults
+        query = request_data.get("query", "")
+        directories = request_data.get("directories", [])
+        language = request_data.get("language", "ko")
+        limit = request_data.get("limit", 10)
+        use_llm = request_data.get("use_llm", True)
+        
+        logger.info(f"Search request: query='{query}', use_llm={use_llm}, limit={limit}")
+        
+        if not query:
+            return {
+                "success": False,
+                "count": 0,
+                "results": [],
+                "method": "error",
+                "error": "Query is required"
+            }
+        
+        results = []
+        search_method = "keyword"
+        
+        # Try LLM-enhanced search first if enabled
+        if use_llm and query:
+            try:
+                logger.info("Attempting LLM-enhanced search")
+                results = await llm_organizer.smart_search(
+                    query,
+                    directories or []
                 )
-        else:
-            # Direct database search
-            results = db_manager.search_files(
-                request.query,
-                request.directories,
-                request.limit
-            )
-            
+                
+                if results:
+                    search_method = "llm_enhanced"
+                    logger.info(f"LLM search returned {len(results)} results")
+                else:
+                    logger.info("LLM search returned no results, falling back to keyword search")
+                    
+            except Exception as llm_error:
+                logger.error(f"LLM search error: {llm_error}")
+                
+        # If LLM search failed or returned no results, try direct database search
+        if not results:
+            try:
+                logger.info("Performing direct database search")
+                results = db_manager.search_files(
+                    query,
+                    directories,
+                    limit
+                )
+                logger.info(f"Database search returned {len(results)} results")
+            except Exception as db_error:
+                logger.error(f"Database search error: {db_error}")
+                results = []
+                
+        # Optional: Try vector search enhancement if available
+        if results and len(results) < limit:
+            try:
+                query_embedding = await embedding_manager.generate_embedding(query)
+                if query_embedding:
+                    similar_files = await embedding_manager.search_similar(query_embedding, top_k=10)
+                    
+                    # Add similar files that aren't already in results
+                    path_to_result = {r['path']: r for r in results}
+                    
+                    for sim_file in similar_files:
+                        if sim_file['similarity'] > 0.6:
+                            file_path = sim_file['metadata'].get('file_path')
+                            if file_path and file_path not in path_to_result:
+                                file_info = db_manager.get_file_by_path(file_path)
+                                if file_info:
+                                    file_info['score'] = sim_file['similarity']
+                                    file_info['search_method'] = 'vector'
+                                    results.append(file_info)
+                                    
+            except Exception as vector_error:
+                logger.warning(f"Vector search error: {vector_error}")
+                
+        # Limit results and add metadata
+        results = results[:limit]
+        
+        # Record timing
+        end_time = time.time()
+        duration = end_time - start_time
+        monitor.record_timing("search_files", duration)
+        
         return {
             "success": True,
             "count": len(results),
             "results": results,
-            "method": "llm_enhanced" if request.use_llm else "keyword"
+            "method": search_method,
+            "query": query
         }
         
     except Exception as e:
         logger.error(f"Search error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "success": False,
+            "count": 0,
+            "results": [],
+            "method": "error",
+            "error": str(e)
+        }
+
+# Original /search endpoint also fixed with raw request handling
+@app.post("/search")
+async def search_files(request: Request):
+    """Enhanced search endpoint - same as search_raw but using original route"""
+    return await search_files_raw(request)
+
+# Alternative simple search endpoint for debugging
+@app.post("/search_simple")
+async def search_files_simple(raw_request: Dict[str, Any] = Body(...)):
+    """Simple search endpoint for debugging"""
+    try:
+        query = raw_request.get("query", "")
+        directories = raw_request.get("directories", None)
+        limit = raw_request.get("limit", 10)
+        
+        logger.info(f"Simple search: query='{query}', directories={directories}, limit={limit}")
+        
+        if not query:
+            return {"success": False, "error": "Query is required"}
+        
+        # Direct database search
+        results = db_manager.search_files(query, directories, limit)
+        
+        return {
+            "success": True,
+            "count": len(results),
+            "results": results,
+            "method": "database_search",
+            "query": query
+        }
+        
+    except Exception as e:
+        logger.error(f"Simple search error: {e}")
+        return {
+            "success": False,
+            "count": 0,
+            "results": [],
+            "method": "error",
+            "error": str(e)
+        }
 
 @app.post("/organize")
 async def organize_files(request: OrganizeRequest, background_tasks: BackgroundTasks):
@@ -177,140 +443,12 @@ async def organize_files(request: OrganizeRequest, background_tasks: BackgroundT
         logger.error(f"Organization error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/workflow")
-async def smart_workflow(request: WorkflowRequest):
-    """Execute complex workflows"""
-    try:
-        if request.action == "organize":
-            # Search then organize
-            search_results = db_manager.search_files(
-                request.searchQuery,
-                limit=100
-            )
-            
-            if search_results:
-                # Create temporary directory with search results
-                temp_dir = f"/tmp/workflow_{int(time.time())}"
-                os.makedirs(temp_dir, exist_ok=True)
-                
-                # Create symbolic links
-                for result in search_results:
-                    src = result['path']
-                    dst = os.path.join(temp_dir, os.path.basename(src))
-                    try:
-                        os.symlink(src, dst)
-                    except:
-                        pass
-                        
-                # Organize the temporary directory
-                organize_result = await llm_organizer.organize_directory(
-                    temp_dir,
-                    request.options.get('targetDir', temp_dir + "_organized"),
-                    request.options.get('method', 'content'),
-                    request.options.get('dryRun', False)
-                )
-                
-                return {
-                    "success": True,
-                    "search_count": len(search_results),
-                    "organize_result": organize_result
-                }
-                
-        elif request.action == "analyze":
-            # Analyze files matching query
-            search_results = db_manager.search_files(
-                request.searchQuery,
-                limit=50
-            )
-            
-            analyses = []
-            for result in search_results[:10]:  # Limit to 10 files
-                analysis = await llm_organizer.analyze_file_with_llm(result['path'])
-                analyses.append({
-                    "file": result['path'],
-                    "analysis": analysis
-                })
-                
-            return {
-                "success": True,
-                "count": len(analyses),
-                "analyses": analyses
-            }
-            
-        elif request.action == "index":
-            # Trigger reindexing
-            file_indexer.run_indexing()
-            return {
-                "success": True,
-                "message": "Indexing completed",
-                "stats": file_indexer.get_stats()
-            }
-            
-        else:
-            raise ValueError(f"Unknown action: {request.action}")
-            
-    except Exception as e:
-        logger.error(f"Workflow error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/index")
-async def trigger_indexing(request: IndexRequest, background_tasks: BackgroundTasks):
-    """Trigger file indexing"""
-    try:
-        task_id = f"index_{int(time.time())}"
-        
-        background_tasks.add_task(
-            run_indexing,
-            task_id,
-            request.directories,
-            request.force
-        )
-        
-        return {
-            "success": True,
-            "message": "Indexing started",
-            "task_id": task_id
-        }
-        
-    except Exception as e:
-        logger.error(f"Indexing error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/task/{task_id}")
-async def get_task_status(task_id: str):
-    """Get background task status"""
-    if task_id in background_tasks:
-        return background_tasks[task_id]
-    else:
-        raise HTTPException(status_code=404, detail="Task not found")
-
-# Category endpoints for quick access
-@app.get("/category/{category}")
-async def get_files_by_category(category: str, limit: int = 50):
-    """Get files by category"""
-    results = db_manager.search_by_category(category, limit)
-    return {
-        "category": category,
-        "count": len(results),
-        "files": results
-    }
-
-@app.get("/recent")
-async def get_recent_files(hours: int = 24, limit: int = 50):
-    """Get recently modified files"""
-    results = db_manager.get_recent_files(hours, limit)
-    return {
-        "hours": hours,
-        "count": len(results),
-        "files": results
-    }
-
 # Background task functions
 async def run_llm_organization(task_id: str, source_dir: str, target_dir: str, 
                              method: str, dry_run: bool):
     """Background task for LLM-based organization"""
     try:
-        background_tasks[task_id] = {
+        background_tasks_dict[task_id] = {
             "status": "running",
             "started_at": datetime.now().isoformat(),
             "progress": 0
@@ -320,55 +458,23 @@ async def run_llm_organization(task_id: str, source_dir: str, target_dir: str,
             source_dir, target_dir, method, dry_run
         )
         
-        background_tasks[task_id] = {
+        background_tasks_dict[task_id] = {
             "status": "completed",
-            "started_at": background_tasks[task_id]["started_at"],
+            "started_at": background_tasks_dict[task_id]["started_at"],
             "completed_at": datetime.now().isoformat(),
             "results": results
         }
         
     except Exception as e:
-        background_tasks[task_id] = {
+        background_tasks_dict[task_id] = {
             "status": "failed",
             "error": str(e),
-            "started_at": background_tasks[task_id]["started_at"],
-            "failed_at": datetime.now().isoformat()
-        }
-
-async def run_indexing(task_id: str, directories: Optional[List[str]], force: bool):
-    """Background task for indexing"""
-    try:
-        background_tasks[task_id] = {
-            "status": "running",
-            "started_at": datetime.now().isoformat()
-        }
-        
-        if directories:
-            for directory in directories:
-                file_indexer.index_directory(directory)
-        else:
-            file_indexer.run_indexing()
-            
-        stats = file_indexer.get_stats()
-        
-        background_tasks[task_id] = {
-            "status": "completed",
-            "started_at": background_tasks[task_id]["started_at"],
-            "completed_at": datetime.now().isoformat(),
-            "stats": stats
-        }
-        
-    except Exception as e:
-        background_tasks[task_id] = {
-            "status": "failed",
-            "error": str(e),
-            "started_at": background_tasks[task_id]["started_at"],
+            "started_at": background_tasks_dict[task_id]["started_at"],
             "failed_at": datetime.now().isoformat()
         }
 
 async def organize_simple(source_dir: str, target_dir: str, method: str, dry_run: bool):
     """Simple organization without LLM"""
-    # Basic implementation for non-LLM organization
     source_path = Path(source_dir)
     target_path = Path(target_dir) if target_dir else source_path / "Organized"
     
@@ -409,169 +515,23 @@ async def organize_simple(source_dir: str, target_dir: str, method: str, dry_run
         "count": len(operations)
     }
 
-# Add smart analysis endpoint
-class SmartAnalyzeRequest(BaseModel):
-    file_path: str
+@app.get("/task/{task_id}")
+async def get_task_status(task_id: str):
+    """Get background task status"""
+    if task_id in background_tasks_dict:
+        return background_tasks_dict[task_id]
+    else:
+        raise HTTPException(status_code=404, detail="Task not found")
 
-@app.post("/analyze/smart")
-async def smart_analyze_file(request: SmartAnalyzeRequest):
-    """Analyze file with smart model selection"""
-    try:
-        result = await enhanced_llm_organizer.analyze_file_with_smart_selection(request.file_path)
-        return {"success": True, "analysis": result}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-class BatchAnalyzeRequest(BaseModel):
-    file_paths: List[str]
-    max_concurrent: int = 5
-
-@app.post("/analyze/batch")
-async def batch_analyze_files(request: BatchAnalyzeRequest):
-    """Batch analyze files with smart model selection"""
-    try:
-        results = await enhanced_llm_organizer.batch_analyze_files(request.file_paths, request.max_concurrent)
-        return {"success": True, "results": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/models/recommendations")
-async def get_model_recommendations(file_paths: List[str] = None):
-    """Get model usage recommendations"""
-    try:
-        if file_paths:
-            recommendations = enhanced_llm_organizer.get_model_recommendations(file_paths)
-        else:
-            recommendations = enhanced_llm_organizer.model_selector.get_model_status()
-        return {"success": True, "recommendations": recommendations}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Advanced file management endpoints
-@app.post("/duplicate/find")
-async def find_duplicates(request: dict):
-    """Find duplicate files using content hash"""
-    try:
-        results = db_manager.find_duplicates()
-        return {"success": True, "duplicates": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/similar/find")
-async def find_similar_files(request: dict):
-    """Find similar files using AI embeddings"""
-    try:
-        file_path = request.get("file_path")
-        if not file_path:
-            raise ValueError("file_path is required")
-        
-        # Get file embedding
-        analysis = await enhanced_llm_organizer.analyze_file_with_smart_selection(file_path)
-        if "embedding" not in analysis:
-            raise ValueError("Could not generate embedding for file")
-        
-        # Find similar files (this would need vector similarity search)
-        # For now, return placeholder
-        return {"success": True, "similar_files": [], "message": "Vector search not implemented"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/cleanup/suggestions")
-async def get_cleanup_suggestions():
-    """Get file cleanup suggestions"""
-    try:
-        suggestions = {
-            "large_files": db_manager.get_large_files(min_size_mb=100),
-            "old_files": db_manager.get_old_files(days=365),
-            "temp_files": db_manager.get_temp_files(),
-            "empty_files": db_manager.get_empty_files()
-        }
-        return {"success": True, "suggestions": suggestions}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/insights/generate")
-async def generate_insights():
-    """Generate AI insights about file collection"""
-    try:
-        stats = file_indexer.get_stats()
-        
-        # Generate insights using LLM
-        insights = await enhanced_llm_organizer.generate_collection_insights(stats)
-        
-        return {"success": True, "insights": insights}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/auto-organize")
-async def auto_organize_directory(request: dict):
-    """Automatically organize directory with AI suggestions"""
-    try:
-        source_dir = request.get("source_dir")
-        if not source_dir:
-            raise ValueError("source_dir is required")
-        
-        # Get AI suggestions for organization
-        suggestions = await enhanced_llm_organizer.get_organization_suggestions(source_dir)
-        
-        return {"success": True, "suggestions": suggestions}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/tags/auto-generate")
-async def auto_generate_tags(request: dict):
-    """Automatically generate tags for files"""
-    try:
-        file_paths = request.get("file_paths", [])
-        if not file_paths:
-            raise ValueError("file_paths is required")
-        
-        results = []
-        for file_path in file_paths:
-            analysis = await enhanced_llm_organizer.analyze_file_with_smart_selection(file_path)
-            tags = analysis.get("keywords", [])
-            results.append({
-                "file_path": file_path,
-                "tags": tags
-            })
-        
-        return {"success": True, "results": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Add scheduler endpoints
-@app.get("/scheduler/status")
-async def get_scheduler_status():
-    """Get scheduler status"""
-    try:
-        import psutil
-        scheduler_running = False
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-            try:
-                if 'scheduler.py' in str(proc.info['cmdline']):
-                    scheduler_running = True
-                    break
-            except:
-                continue
-        
-        return {
-            "scheduler_running": scheduler_running,
-            "message": "Scheduler status checked"
-        }
-    except Exception as e:
-        return {"error": str(e)}
-
-@app.post("/scheduler/trigger")
-async def trigger_scheduler_indexing():
-    """Trigger immediate indexing via scheduler"""
-    try:
-        import requests
-        # This would trigger the scheduler if it had an API endpoint
-        # For now, just trigger manual indexing
-        background_tasks.add_task(run_background_indexing)
-        return {"message": "Indexing triggered"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/recent")
+async def get_recent_files(hours: int = 24, limit: int = 50):
+    """Get recently modified files"""
+    results = db_manager.get_recent_files(hours, limit)
+    return {
+        "hours": hours,
+        "count": len(results),
+        "files": results
+    }
 
 if __name__ == "__main__":
     import uvicorn

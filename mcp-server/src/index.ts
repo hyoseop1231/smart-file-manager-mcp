@@ -13,7 +13,11 @@ const SearchFilesSchema = z.object({
   directories: z.array(z.string()).optional().describe("Directories to search in"),
   language: z.string().optional().default("ko").describe("Language for search"),
   limit: z.number().optional().default(10).describe("Maximum number of results"),
-});
+}).transform((data) => ({
+  ...data,
+  // Ensure directories is always an array or undefined
+  directories: data.directories && data.directories.length > 0 ? data.directories : undefined,
+}));
 
 const QuickSearchSchema = z.object({
   category: z.enum(["image", "video", "audio", "document", "code", "archive", "other"]).optional(),
@@ -71,7 +75,7 @@ class SmartFileManagerServer {
               directories: { 
                 type: "array", 
                 items: { type: "string" },
-                description: "Directories to search in"
+                description: "Directories to search in (optional)"
               },
               language: { type: "string", description: "Language for search (default: ko)" },
               limit: { type: "number", description: "Maximum number of results (default: 10)" },
@@ -148,18 +152,90 @@ class SmartFileManagerServer {
 
         switch (name) {
           case "search_files": {
-            const validatedArgs = SearchFilesSchema.parse(args);
-            // Add LLM enhancement flag for semantic search
-            const enhancedArgs = { ...validatedArgs, use_llm: true };
-            const response = await axios.post(`${AI_SERVICE_URL}/search`, enhancedArgs);
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: JSON.stringify(response.data, null, 2),
-                },
-              ],
-            };
+            try {
+              console.error(`[DEBUG] Raw search_files args:`, JSON.stringify(args));
+              const validatedArgs = SearchFilesSchema.parse(args);
+              console.error(`[DEBUG] Validated search_files args:`, JSON.stringify(validatedArgs));
+              
+              // Add LLM enhancement flag for semantic search
+              const enhancedArgs = { ...validatedArgs, use_llm: true };
+              console.error(`[DEBUG] Enhanced args for AI service:`, JSON.stringify(enhancedArgs));
+              
+              // Try the fixed search endpoint first
+              try {
+                const response = await axios.post(`${AI_SERVICE_URL}/search`, enhancedArgs, {
+                  headers: { 'Content-Type': 'application/json' },
+                  timeout: 30000
+                });
+                
+                console.error(`[DEBUG] Search response received:`, response.status);
+                
+                return {
+                  content: [
+                    {
+                      type: "text",
+                      text: JSON.stringify(response.data, null, 2),
+                    },
+                  ],
+                };
+              } catch (mainError) {
+                console.error(`[ERROR] Main search endpoint failed:`, mainError);
+                
+                // Log detailed error information
+                if (axios.isAxiosError(mainError)) {
+                  console.error(`[ERROR] Response status:`, mainError.response?.status);
+                  console.error(`[ERROR] Response data:`, JSON.stringify(mainError.response?.data, null, 2));
+                  console.error(`[ERROR] Response headers:`, mainError.response?.headers);
+                }
+                
+                // Fallback to simple search endpoint
+                try {
+                  console.error(`[DEBUG] Trying fallback search_simple endpoint`);
+                  const fallbackResponse = await axios.post(`${AI_SERVICE_URL}/search_simple`, enhancedArgs, {
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: 30000
+                  });
+                  
+                  console.error(`[DEBUG] Fallback search response received:`, fallbackResponse.status);
+                  
+                  return {
+                    content: [
+                      {
+                        type: "text",
+                        text: JSON.stringify(fallbackResponse.data, null, 2),
+                      },
+                    ],
+                  };
+                } catch (fallbackError) {
+                  console.error(`[ERROR] Fallback search also failed:`, fallbackError);
+                  
+                  if (axios.isAxiosError(fallbackError)) {
+                    console.error(`[ERROR] Fallback response status:`, fallbackError.response?.status);
+                    console.error(`[ERROR] Fallback response data:`, JSON.stringify(fallbackError.response?.data, null, 2));
+                  }
+                  
+                  throw mainError; // Throw the original error
+                }
+              }
+            } catch (error) {
+              console.error(`[ERROR] search_files validation or processing failed:`, error);
+              
+              if (axios.isAxiosError(error)) {
+                console.error(`[ERROR] Axios error details:`, {
+                  status: error.response?.status,
+                  statusText: error.response?.statusText,
+                  data: error.response?.data,
+                  config: {
+                    url: error.config?.url,
+                    method: error.config?.method,
+                    headers: error.config?.headers,
+                    data: error.config?.data
+                  }
+                });
+              }
+              
+              throw error;
+            }
           }
 
           case "organize_files": {

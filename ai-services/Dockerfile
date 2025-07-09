@@ -1,10 +1,13 @@
 FROM python:3.11-slim
 
-# Install system dependencies
+# Install system dependencies including build tools for psutil
 RUN apt-get update && apt-get install -y \
     curl \
     libmagic1 \
     supervisor \
+    build-essential \
+    python3-dev \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -25,6 +28,9 @@ COPY mafm_bridge.py .
 COPY organizer_bridge.py .
 COPY ollama_bridge.py .
 COPY multi_agent_manager.py .
+COPY embedding_manager.py .
+COPY db_connection_pool.py .
+COPY performance_monitor.py .
 
 # Copy additional directories
 COPY mafm/ ./mafm/

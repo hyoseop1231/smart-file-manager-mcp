@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  # MCP Server only (without AI services for now)
+  mcp-server:
+    build: 
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    container_name: smart-file-mcp
+    environment:
+      - AI_SERVICE_URL=http://host.docker.internal:8000
+    volumes:
+      # Mount user's home directory as read-only
+      - ${HOME}:/host-files:ro
+    stdin_open: true
+    tty: true
+
+  # AI Services running locally for testing
+  # Run with: cd ai-services && python api.py

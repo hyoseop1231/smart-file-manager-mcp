@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "smart-file-manager": {
+      "command": "docker",
+      "args": [
+        "exec", "-i", "smart-file-mcp",
+        "node", "/app/dist/index.js"
+      ],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}

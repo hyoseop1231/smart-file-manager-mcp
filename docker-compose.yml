@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # Smart File Manager - Main API service with integrated scheduler
+  smart-file-manager:
+    build: 
+      context: ./ai-services
+      dockerfile: Dockerfile
+    container_name: smart-file-manager
+    ports:
+      - "8001:8001"
+      - "9001:9001"  # Supervisor web interface
+    volumes:
+      # Watch directories (customize as needed)
+      - ${HOME}/Documents:/watch_directories/Documents:ro
+      - ${HOME}/Downloads:/watch_directories/Downloads:ro
+      - ${HOME}/Desktop:/watch_directories/Desktop:ro
+      - ${HOME}/Pictures:/watch_directories/Pictures:ro
+      - ${HOME}/Movies:/watch_directories/Movies:ro
+      - ${HOME}/Music:/watch_directories/Music:ro
+      # Persistent data storage
+      - smart_file_data:/data/db
+      - smart_file_embeddings:/data/embeddings
+      - smart_file_metadata:/data/metadata
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PORT=8001
+      - DB_PATH=/data/db/file-index.db
+      - EMBEDDINGS_PATH=/data/embeddings
+      - METADATA_PATH=/data/metadata
+      - OLLAMA_API_URL=http://host.docker.internal:11434/api/generate
+      - WATCH_DIRECTORIES=/watch_directories
+      - FULL_INDEXING_INTERVAL=7200  # 2 hours
+      - QUICK_INDEXING_INTERVAL=1800  # 30 minutes
+      - CLEANUP_INTERVAL=86400  # 24 hours
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Ollama LLM service
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    restart: unless-stopped
+    # GPU support (comment out if no GPU)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # MCP Server for Claude Desktop integration
+  mcp-server:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    container_name: smart-file-mcp-server
+    environment:
+      - AI_SERVICE_URL=http://smart-file-manager:8001
+    depends_on:
+      - smart-file-manager
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+volumes:
+  smart_file_data:
+    driver: local
+  smart_file_embeddings:
+    driver: local
+  smart_file_metadata:
+    driver: local
+  ollama_data:
+    driver: local
+
+networks:
+  default:
+    name: smart-file-manager-network

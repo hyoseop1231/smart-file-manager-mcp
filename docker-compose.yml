@@ -81,6 +81,25 @@ services:
     stdin_open: true
     tty: true
 
+  # Web UI for monitoring and control
+  web-ui:
+    build:
+      context: ./web-ui
+      dockerfile: Dockerfile
+    container_name: smart-file-manager-ui
+    ports:
+      - "3000:80"
+    depends_on:
+      - smart-file-manager
+    environment:
+      - REACT_APP_API_URL=http://localhost:8001
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 volumes:
   smart_file_data:
     driver: local

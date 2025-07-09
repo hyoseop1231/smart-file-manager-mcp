@@ -14,8 +14,17 @@ from smart_model_selector import SmartModelSelector
 logger = logging.getLogger(__name__)
 
 class EnhancedLLMOrganizer:
-    def __init__(self, ollama_url: str = "http://localhost:11434"):
-        self.ollama_url = ollama_url
+    def __init__(self, ollama_url: str = None):
+        if ollama_url is None:
+            # Get from environment variable or use default
+            base_url = os.environ.get("OLLAMA_API_URL", "http://localhost:11434/api/generate")
+            # Extract base URL if it includes /api/generate
+            if "/api/generate" in base_url:
+                self.ollama_url = base_url.replace("/api/generate", "")
+            else:
+                self.ollama_url = base_url
+        else:
+            self.ollama_url = ollama_url
         self.model_selector = SmartModelSelector()
         
     async def analyze_file_with_smart_selection(self, file_path: str) -> Dict[str, Any]:

@@ -1,0 +1,27 @@
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+python-multipart==0.0.6
+aiofiles==23.2.1
+
+# Core dependencies
+numpy==1.24.3
+scikit-learn==1.3.2
+pillow==10.2.0
+
+# Network and HTTP
+requests==2.31.0
+aiohttp==3.9.1
+
+# File processing
+python-magic==0.4.27
+chardet==5.2.0
+
+# Scheduling and process management
+schedule==1.2.0
+psutil==5.9.7
+
+# Database (SQLite is built-in)
+
+# Additional dependencies for enhanced features
+supervisor==4.2.5

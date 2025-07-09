@@ -158,8 +158,14 @@ const Analytics: React.FC = () => {
   ] : [];
 
   // Process file activity data
+  interface ActivityDataItem {
+    date: string;
+    files: number;
+    size: number;
+  }
+  
   const activityData = recentFiles?.files ? 
-    recentFiles.files.reduce((acc: any[], file: any) => {
+    recentFiles.files.reduce((acc: ActivityDataItem[], file: any) => {
       const date = new Date(file.modified * 1000).toLocaleDateString();
       const existing = acc.find(item => item.date === date);
       if (existing) {
@@ -169,7 +175,7 @@ const Analytics: React.FC = () => {
         acc.push({ date, files: 1, size: file.size });
       }
       return acc;
-    }, []).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) : [];
+    }, []).sort((a: ActivityDataItem, b: ActivityDataItem) => new Date(a.date).getTime() - new Date(b.date).getTime()) : [];
 
   const duplicateGroups = duplicatesData?.duplicates || [];
   const potentialSavings = calculatePotentialSavings(duplicateGroups);
@@ -317,7 +323,7 @@ const Analytics: React.FC = () => {
                     Potential savings: {formatBytes(potentialSavings)}
                   </Alert>
                   <List>
-                    {duplicateGroups.slice(0, 10).map((group: DuplicateGroup, index) => (
+                    {duplicateGroups.slice(0, 10).map((group: DuplicateGroup, index: number) => (
                       <ListItem
                         key={group.duplicate_key}
                         sx={{

@@ -14,6 +14,8 @@ import {
   ListItemText,
   Alert,
   Skeleton,
+  Button,
+  Tooltip as MuiTooltip,
 } from '@mui/material';
 import {
   Storage as StorageIcon,
@@ -26,12 +28,18 @@ import {
   TrendingUp as TrendingUpIcon,
   Folder as FolderIcon,
   InsertDriveFile as FileIcon,
+  ArrowForward as ArrowForwardIcon,
 } from '@mui/icons-material';
 import { useQuery } from 'react-query';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import axios from 'axios';
 
 const Dashboard: React.FC = () => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  
   // Fetch system health
   const { data: healthData, isLoading: healthLoading, refetch: refetchHealth } = useQuery(
     'health',
@@ -108,13 +116,15 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          System Dashboard
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1">
+          {t('dashboard.title')}
         </Typography>
-        <IconButton onClick={() => refetchHealth()}>
-          <RefreshIcon />
-        </IconButton>
+        <MuiTooltip title={t('dashboard.refresh')}>
+          <IconButton onClick={() => refetchHealth()} color="primary">
+            <RefreshIcon />
+          </IconButton>
+        </MuiTooltip>
       </Box>
 
       <Grid container spacing={3}>
@@ -125,13 +135,13 @@ const Dashboard: React.FC = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
                   <Typography color="textSecondary" gutterBottom variant="h6">
-                    System Status
+                    {t('dashboard.systemHealth')}
                   </Typography>
                   {healthLoading ? (
                     <Skeleton width={80} height={32} />
                   ) : (
                     <Chip
-                      label={healthData?.status || 'Unknown'}
+                      label={t(`dashboard.${healthData?.status || 'healthy'}`)}
                       color={getStatusColor(healthData?.status)}
                       icon={getStatusIcon(healthData?.status)}
                     />
@@ -144,12 +154,15 @@ const Dashboard: React.FC = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card 
+            sx={{ cursor: 'pointer', '&:hover': { boxShadow: 3 } }}
+            onClick={() => navigate('/explorer')}
+          >
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
                   <Typography color="textSecondary" gutterBottom variant="h6">
-                    Total Files
+                    {t('dashboard.totalFiles')}
                   </Typography>
                   {healthLoading ? (
                     <Skeleton width={100} height={32} />
@@ -166,12 +179,15 @@ const Dashboard: React.FC = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card
+            sx={{ cursor: 'pointer', '&:hover': { boxShadow: 3 } }}
+            onClick={() => navigate('/analytics')}
+          >
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
                   <Typography color="textSecondary" gutterBottom variant="h6">
-                    Storage Used
+                    {t('dashboard.totalSize')}
                   </Typography>
                   {healthLoading ? (
                     <Skeleton width={80} height={32} />
@@ -213,9 +229,18 @@ const Dashboard: React.FC = () => {
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                File Distribution by Category
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">
+                  {t('dashboard.fileActivity')}
+                </Typography>
+                <Button
+                  size="small"
+                  endIcon={<ArrowForwardIcon />}
+                  onClick={() => navigate('/analytics')}
+                >
+                  {t('dashboard.viewDetails')}
+                </Button>
+              </Box>
               {categoryData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>

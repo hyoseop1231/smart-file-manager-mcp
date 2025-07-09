@@ -29,7 +29,9 @@ import {
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
+import LanguageSwitcher from '../LanguageSwitcher/LanguageSwitcher';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -37,20 +39,21 @@ interface LayoutProps {
 
 const drawerWidth = 280;
 
-const navigationItems = [
-  { path: '/', label: 'Dashboard', icon: DashboardIcon },
-  { path: '/explorer', label: 'File Explorer', icon: FolderIcon },
-  { path: '/analytics', label: 'Analytics', icon: AnalyticsIcon },
-  { path: '/organization', label: 'Organization', icon: OrganizeIcon },
-  { path: '/settings', label: 'Settings', icon: SettingsIcon },
-];
-
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const navigationItems = [
+    { path: '/', label: t('nav.dashboard'), icon: DashboardIcon },
+    { path: '/explorer', label: t('nav.fileExplorer'), icon: FolderIcon },
+    { path: '/analytics', label: t('nav.analytics'), icon: AnalyticsIcon },
+    { path: '/organization', label: t('nav.organization'), icon: OrganizeIcon },
+    { path: '/settings', label: t('nav.settings'), icon: SettingsIcon },
+  ];
 
   // Fetch system status for header
   const { data: systemStatus } = useQuery(
@@ -81,10 +84,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <StorageIcon color="primary" sx={{ fontSize: 32 }} />
           <Box>
             <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
-              Smart File Manager
+              {t('app.title')}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              AI-Powered File Organization
+              {t('app.subtitle')}
             </Typography>
           </Box>
         </Box>
@@ -222,6 +225,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <NotificationsIcon />
               </Badge>
             </IconButton>
+
+            <LanguageSwitcher />
 
             <IconButton color="inherit">
               <DarkModeIcon />

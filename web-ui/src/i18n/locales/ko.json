@@ -1,0 +1,313 @@
+{
+  "app": {
+    "title": "스마트 파일 매니저",
+    "subtitle": "AI 기반 파일 관리 시스템"
+  },
+  "nav": {
+    "dashboard": "대시보드",
+    "fileExplorer": "파일 탐색기",
+    "analytics": "분석",
+    "organization": "파일 정리",
+    "settings": "설정"
+  },
+  "dashboard": {
+    "title": "시스템 모니터링 대시보드",
+    "totalFiles": "전체 파일",
+    "totalSize": "전체 용량",
+    "recentActivity": "최근 활동",
+    "systemHealth": "시스템 상태",
+    "cpuUsage": "CPU 사용률",
+    "memoryUsage": "메모리 사용률",
+    "diskUsage": "디스크 사용률",
+    "fileActivity": "파일 활동",
+    "lastIndexed": "마지막 인덱싱",
+    "filesIndexed": "인덱싱된 파일",
+    "refresh": "새로고침",
+    "viewDetails": "상세보기",
+    "healthy": "정상",
+    "warning": "경고",
+    "error": "오류",
+    "filesModified": "수정된 파일",
+    "recentFiles": "최근 파일",
+    "systemMetrics": "시스템 메트릭",
+    "performanceOverview": "성능 개요"
+  },
+  "fileExplorer": {
+    "title": "파일 탐색기",
+    "searchPlaceholder": "파일 검색... (예: '프로젝트 문서', 'PDF 파일')",
+    "search": "검색",
+    "clearFilters": "필터 초기화",
+    "advancedSearch": "고급 검색",
+    "naturalLanguageSearch": "자연어 검색",
+    "filters": {
+      "title": "필터",
+      "fileType": "파일 유형",
+      "dateRange": "날짜 범위",
+      "sizeRange": "크기 범위",
+      "directory": "디렉토리",
+      "all": "전체",
+      "documents": "문서",
+      "images": "이미지",
+      "videos": "동영상",
+      "audio": "오디오",
+      "code": "코드",
+      "archives": "압축파일",
+      "lastDay": "최근 24시간",
+      "lastWeek": "최근 1주일",
+      "lastMonth": "최근 1개월",
+      "custom": "사용자 지정"
+    },
+    "results": {
+      "showing": "{{count}}개 결과 표시",
+      "noResults": "검색 결과가 없습니다",
+      "searching": "검색 중...",
+      "fileName": "파일명",
+      "path": "경로",
+      "size": "크기",
+      "modified": "수정일",
+      "actions": "작업"
+    },
+    "actions": {
+      "open": "열기",
+      "analyze": "분석",
+      "organize": "정리",
+      "delete": "삭제",
+      "move": "이동",
+      "copy": "복사",
+      "rename": "이름 변경",
+      "properties": "속성",
+      "selectAll": "전체 선택",
+      "deselectAll": "선택 해제",
+      "batchActions": "일괄 작업",
+      "newFolder": "새 폴더",
+      "upload": "파일 업로드"
+    }
+  },
+  "analytics": {
+    "title": "파일 분석 및 인사이트",
+    "duplicatesFound": "중복 파일",
+    "potentialSavings": "절약 가능 용량",
+    "avgCpuUsage": "평균 CPU 사용률",
+    "activeFiles": "활성 파일",
+    "duplicateDetection": {
+      "title": "중복 파일 탐지",
+      "method": "탐지 방법",
+      "minSize": "최소 크기",
+      "contentHash": "내용 해시",
+      "fileName": "파일명",
+      "fileSize": "파일 크기",
+      "allFiles": "모든 파일",
+      "noDuplicates": "현재 조건에서 중복 파일이 없습니다.",
+      "identicalContent": "동일한 내용",
+      "preview": "미리보기",
+      "deleteDuplicates": "중복 삭제",
+      "selectForDeletion": "삭제할 파일 선택"
+    },
+    "systemPerformance": {
+      "title": "시스템 성능",
+      "current": "현재",
+      "average": "평균",
+      "peak": "최고"
+    },
+    "fileActivityTrends": {
+      "title": "파일 활동 동향 (최근 7일)",
+      "filesModified": "수정된 파일",
+      "dataVolume": "데이터 볼륨 (바이트)"
+    },
+    "insights": {
+      "title": "성능 인사이트 및 권장사항",
+      "highCpuUsage": "높은 CPU 사용률이 감지되었습니다",
+      "largeDuplicates": "대용량 중복 파일이 많습니다",
+      "fragmentedStorage": "저장 공간이 단편화되어 있습니다"
+    },
+    "refreshData": "데이터 새로고침"
+  },
+  "organization": {
+    "title": "AI 기반 파일 정리",
+    "subtitle": "AI가 파일을 분석하고 최적의 정리 방법을 제안합니다",
+    "steps": {
+      "selectSource": "소스 선택",
+      "configureOptions": "옵션 설정",
+      "preview": "미리보기",
+      "apply": "적용"
+    },
+    "sourceSelection": {
+      "title": "정리할 디렉토리 선택",
+      "selectDirectory": "디렉토리 선택",
+      "commonLocations": "자주 사용하는 위치",
+      "downloads": "다운로드",
+      "desktop": "바탕화면",
+      "documents": "문서",
+      "custom": "사용자 지정"
+    },
+    "options": {
+      "title": "정리 옵션",
+      "method": "정리 방법",
+      "byContent": "내용별 (AI 분석)",
+      "byType": "파일 유형별",
+      "byDate": "날짜별",
+      "byProject": "프로젝트별",
+      "targetDirectory": "대상 디렉토리",
+      "createSubfolders": "하위 폴더 생성",
+      "handleDuplicates": "중복 파일 처리",
+      "dryRun": "시험 실행 (파일 이동 없음)",
+      "preserveOriginal": "원본 유지"
+    },
+    "preview": {
+      "title": "정리 미리보기",
+      "proposedStructure": "제안된 구조",
+      "affectedFiles": "영향받는 파일",
+      "category": "카테고리",
+      "fileCount": "파일 수",
+      "from": "원본",
+      "to": "대상",
+      "willBeMoved": "이동될 예정"
+    },
+    "progress": {
+      "organizing": "파일 정리 중...",
+      "analyzing": "파일 분석 중...",
+      "moving": "파일 이동 중...",
+      "complete": "정리 완료!",
+      "filesOrganized": "{{count}}개 파일이 정리되었습니다",
+      "error": "정리 중 오류가 발생했습니다"
+    },
+    "actions": {
+      "startOrganizing": "정리 시작",
+      "cancel": "취소",
+      "back": "이전",
+      "next": "다음",
+      "apply": "적용",
+      "undo": "실행 취소",
+      "viewReport": "보고서 보기"
+    }
+  },
+  "settings": {
+    "title": "설정",
+    "general": {
+      "title": "일반 설정",
+      "language": "언어",
+      "theme": "테마",
+      "light": "밝은 테마",
+      "dark": "어두운 테마",
+      "auto": "자동",
+      "notifications": "알림",
+      "enableNotifications": "알림 활성화",
+      "soundAlerts": "소리 알림"
+    },
+    "directories": {
+      "title": "감시 디렉토리",
+      "addDirectory": "디렉토리 추가",
+      "removeDirectory": "제거",
+      "path": "경로",
+      "status": "상태",
+      "active": "활성",
+      "inactive": "비활성",
+      "browse": "찾아보기"
+    },
+    "indexing": {
+      "title": "인덱싱 설정",
+      "schedule": "스케줄",
+      "fullIndexing": "전체 인덱싱",
+      "quickIndexing": "빠른 인덱싱",
+      "interval": "간격",
+      "hours": "시간",
+      "minutes": "분",
+      "runNow": "지금 실행",
+      "lastRun": "마지막 실행",
+      "nextRun": "다음 실행"
+    },
+    "ai": {
+      "title": "AI 설정",
+      "model": "모델 선택",
+      "enableSmartSearch": "스마트 검색 활성화",
+      "enableContentAnalysis": "콘텐츠 분석 활성화",
+      "apiEndpoint": "API 엔드포인트",
+      "testConnection": "연결 테스트"
+    },
+    "performance": {
+      "title": "성능 설정",
+      "maxWorkers": "최대 작업자 수",
+      "cacheSize": "캐시 크기",
+      "memoryLimit": "메모리 제한",
+      "cpuLimit": "CPU 제한"
+    },
+    "actions": {
+      "save": "저장",
+      "reset": "초기화",
+      "export": "설정 내보내기",
+      "import": "설정 가져오기"
+    }
+  },
+  "common": {
+    "loading": "로딩 중...",
+    "error": "오류",
+    "success": "성공",
+    "warning": "경고",
+    "info": "정보",
+    "confirm": "확인",
+    "cancel": "취소",
+    "close": "닫기",
+    "save": "저장",
+    "delete": "삭제",
+    "edit": "편집",
+    "view": "보기",
+    "refresh": "새로고침",
+    "search": "검색",
+    "filter": "필터",
+    "sort": "정렬",
+    "export": "내보내기",
+    "import": "가져오기",
+    "yes": "예",
+    "no": "아니오",
+    "all": "전체",
+    "none": "없음",
+    "select": "선택",
+    "selected": "선택됨",
+    "items": "항목",
+    "of": "중",
+    "to": "~",
+    "from": "부터",
+    "ago": "전",
+    "now": "지금",
+    "today": "오늘",
+    "yesterday": "어제",
+    "tomorrow": "내일",
+    "week": "주",
+    "month": "월",
+    "year": "년",
+    "bytes": "바이트",
+    "kb": "KB",
+    "mb": "MB",
+    "gb": "GB",
+    "tb": "TB"
+  },
+  "notifications": {
+    "fileSearchComplete": "파일 검색이 완료되었습니다",
+    "organizationComplete": "파일 정리가 완료되었습니다",
+    "duplicatesFound": "{{count}}개의 중복 파일을 발견했습니다",
+    "errorOccurred": "오류가 발생했습니다: {{error}}",
+    "settingsSaved": "설정이 저장되었습니다",
+    "indexingStarted": "인덱싱이 시작되었습니다",
+    "indexingComplete": "인덱싱이 완료되었습니다"
+  },
+  "tooltips": {
+    "refreshData": "최신 데이터로 새로고침",
+    "viewDetails": "자세한 정보 보기",
+    "selectMultiple": "여러 파일 선택",
+    "dragToReorder": "드래그하여 순서 변경",
+    "clickToSort": "클릭하여 정렬",
+    "aiPowered": "AI 기반 기능"
+  },
+  "dialogs": {
+    "confirmDelete": {
+      "title": "삭제 확인",
+      "message": "정말로 선택한 {{count}}개 파일을 삭제하시겠습니까?",
+      "warning": "이 작업은 되돌릴 수 없습니다."
+    },
+    "organizationWarning": {
+      "title": "파일 정리 경고",
+      "message": "파일 정리를 시작하면 많은 파일이 이동될 수 있습니다.",
+      "recommendation": "먼저 시험 실행을 수행하는 것을 권장합니다."
+    }
+  }
+}

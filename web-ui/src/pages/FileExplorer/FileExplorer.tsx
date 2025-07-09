@@ -32,6 +32,8 @@ import {
   Select,
   Switch,
   FormControlLabel,
+  Alert,
+  Tooltip,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -47,11 +49,16 @@ import {
   Add as AddIcon,
   Upload as UploadIcon,
   CreateNewFolder as NewFolderIcon,
+  Clear as ClearIcon,
+  SelectAll as SelectAllIcon,
 } from '@mui/icons-material';
 import { useQuery } from 'react-query';
+import { useTranslation } from 'react-i18next';
 import { useDropzone } from 'react-dropzone';
+import { useSnackbar } from 'notistack';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
+import { ko, enUS } from 'date-fns/locale';
 
 interface FileItem {
   path: string;
@@ -66,6 +73,8 @@ interface FileItem {
 }
 
 const FileExplorer: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const { enqueueSnackbar } = useSnackbar();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -74,6 +83,7 @@ const FileExplorer: React.FC = () => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState<null | HTMLElement>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
   // Filters
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -185,27 +195,52 @@ const FileExplorer: React.FC = () => {
   const totalFiles = searchResults?.count || 0;
   const totalPages = Math.ceil(totalFiles / itemsPerPage);
 
+  // Handle file actions
+  const handleDeleteFiles = async () => {
+    if (selectedFiles.length === 0) return;
+    
+    try {
+      // API call to delete files would go here
+      enqueueSnackbar(t('notifications.errorOccurred', { error: 'Delete API not implemented' }), { variant: 'warning' });
+      setDeleteDialogOpen(false);
+      setSelectedFiles([]);
+    } catch (error) {
+      enqueueSnackbar(t('notifications.errorOccurred', { error: error }), { variant: 'error' });
+    }
+  };
+
+  const handleAnalyzeFile = async (filePath: string) => {
+    try {
+      await axios.post('/analyze', { filePath, analysisType: 'smart' });
+      enqueueSnackbar(t('fileExplorer.actions.analyze') + ' ' + t('common.success'), { variant: 'success' });
+    } catch (error) {
+      enqueueSnackbar(t('notifications.errorOccurred', { error: error }), { variant: 'error' });
+    }
+  };
+
+  const dateLocale = i18n.language === 'ko' ? ko : enUS;
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" component="h1">
-          File Explorer
+          {t('fileExplorer.title')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             variant="outlined"
             startIcon={<NewFolderIcon />}
-            onClick={() => {/* Handle new folder */}}
+            onClick={() => enqueueSnackbar(t('common.info') + ': Feature coming soon', { variant: 'info' })}
           >
-            New Folder
+            {t('fileExplorer.actions.newFolder')}
           </Button>
           <Button
             variant="contained"
             startIcon={<UploadIcon />}
             onClick={() => setUploadDialogOpen(true)}
           >
-            Upload Files
+            {t('fileExplorer.actions.upload')}
           </Button>
         </Box>
       </Box>
@@ -217,13 +252,25 @@ const FileExplorer: React.FC = () => {
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                placeholder="Search files and folders..."
+                placeholder={t('fileExplorer.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    refetch();
+                  }
+                }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
                       <SearchIcon />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchQuery && (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={() => setSearchQuery('')}>
+                        <ClearIcon />
+                      </IconButton>
                     </InputAdornment>
                   ),
                 }}

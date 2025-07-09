@@ -1,0 +1,313 @@
+{
+  "app": {
+    "title": "Smart File Manager",
+    "subtitle": "AI-Powered File Management System"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "fileExplorer": "File Explorer",
+    "analytics": "Analytics",
+    "organization": "Organization",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "title": "System Monitoring Dashboard",
+    "totalFiles": "Total Files",
+    "totalSize": "Total Size",
+    "recentActivity": "Recent Activity",
+    "systemHealth": "System Health",
+    "cpuUsage": "CPU Usage",
+    "memoryUsage": "Memory Usage",
+    "diskUsage": "Disk Usage",
+    "fileActivity": "File Activity",
+    "lastIndexed": "Last Indexed",
+    "filesIndexed": "Files Indexed",
+    "refresh": "Refresh",
+    "viewDetails": "View Details",
+    "healthy": "Healthy",
+    "warning": "Warning",
+    "error": "Error",
+    "filesModified": "Files Modified",
+    "recentFiles": "Recent Files",
+    "systemMetrics": "System Metrics",
+    "performanceOverview": "Performance Overview"
+  },
+  "fileExplorer": {
+    "title": "File Explorer",
+    "searchPlaceholder": "Search files... (e.g., 'project documents', 'PDF files')",
+    "search": "Search",
+    "clearFilters": "Clear Filters",
+    "advancedSearch": "Advanced Search",
+    "naturalLanguageSearch": "Natural Language Search",
+    "filters": {
+      "title": "Filters",
+      "fileType": "File Type",
+      "dateRange": "Date Range",
+      "sizeRange": "Size Range",
+      "directory": "Directory",
+      "all": "All",
+      "documents": "Documents",
+      "images": "Images",
+      "videos": "Videos",
+      "audio": "Audio",
+      "code": "Code",
+      "archives": "Archives",
+      "lastDay": "Last 24 Hours",
+      "lastWeek": "Last Week",
+      "lastMonth": "Last Month",
+      "custom": "Custom"
+    },
+    "results": {
+      "showing": "Showing {{count}} results",
+      "noResults": "No results found",
+      "searching": "Searching...",
+      "fileName": "File Name",
+      "path": "Path",
+      "size": "Size",
+      "modified": "Modified",
+      "actions": "Actions"
+    },
+    "actions": {
+      "open": "Open",
+      "analyze": "Analyze",
+      "organize": "Organize",
+      "delete": "Delete",
+      "move": "Move",
+      "copy": "Copy",
+      "rename": "Rename",
+      "properties": "Properties",
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All",
+      "batchActions": "Batch Actions",
+      "newFolder": "New Folder",
+      "upload": "Upload Files"
+    }
+  },
+  "analytics": {
+    "title": "File Analytics & Insights",
+    "duplicatesFound": "Duplicates Found",
+    "potentialSavings": "Potential Savings",
+    "avgCpuUsage": "Avg CPU Usage",
+    "activeFiles": "Active Files",
+    "duplicateDetection": {
+      "title": "Duplicate File Detection",
+      "method": "Method",
+      "minSize": "Min Size",
+      "contentHash": "Content Hash",
+      "fileName": "File Name",
+      "fileSize": "File Size",
+      "allFiles": "All Files",
+      "noDuplicates": "No duplicates found with current criteria.",
+      "identicalContent": "Identical Content",
+      "preview": "Preview",
+      "deleteDuplicates": "Delete Duplicates",
+      "selectForDeletion": "Select files for deletion"
+    },
+    "systemPerformance": {
+      "title": "System Performance",
+      "current": "Current",
+      "average": "Avg",
+      "peak": "Peak"
+    },
+    "fileActivityTrends": {
+      "title": "File Activity Trends (Last 7 Days)",
+      "filesModified": "Files Modified",
+      "dataVolume": "Data Volume (bytes)"
+    },
+    "insights": {
+      "title": "Performance Insights & Recommendations",
+      "highCpuUsage": "High CPU usage detected",
+      "largeDuplicates": "Many large duplicate files found",
+      "fragmentedStorage": "Storage is fragmented"
+    },
+    "refreshData": "Refresh Data"
+  },
+  "organization": {
+    "title": "AI-Powered File Organization",
+    "subtitle": "Let AI analyze and suggest the best way to organize your files",
+    "steps": {
+      "selectSource": "Select Source",
+      "configureOptions": "Configure Options",
+      "preview": "Preview",
+      "apply": "Apply"
+    },
+    "sourceSelection": {
+      "title": "Select Directory to Organize",
+      "selectDirectory": "Select Directory",
+      "commonLocations": "Common Locations",
+      "downloads": "Downloads",
+      "desktop": "Desktop",
+      "documents": "Documents",
+      "custom": "Custom"
+    },
+    "options": {
+      "title": "Organization Options",
+      "method": "Organization Method",
+      "byContent": "By Content (AI Analysis)",
+      "byType": "By File Type",
+      "byDate": "By Date",
+      "byProject": "By Project",
+      "targetDirectory": "Target Directory",
+      "createSubfolders": "Create Subfolders",
+      "handleDuplicates": "Handle Duplicates",
+      "dryRun": "Dry Run (No files moved)",
+      "preserveOriginal": "Preserve Original"
+    },
+    "preview": {
+      "title": "Organization Preview",
+      "proposedStructure": "Proposed Structure",
+      "affectedFiles": "Affected Files",
+      "category": "Category",
+      "fileCount": "File Count",
+      "from": "From",
+      "to": "To",
+      "willBeMoved": "Will be moved"
+    },
+    "progress": {
+      "organizing": "Organizing files...",
+      "analyzing": "Analyzing files...",
+      "moving": "Moving files...",
+      "complete": "Organization complete!",
+      "filesOrganized": "{{count}} files organized",
+      "error": "Error during organization"
+    },
+    "actions": {
+      "startOrganizing": "Start Organizing",
+      "cancel": "Cancel",
+      "back": "Back",
+      "next": "Next",
+      "apply": "Apply",
+      "undo": "Undo",
+      "viewReport": "View Report"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "general": {
+      "title": "General Settings",
+      "language": "Language",
+      "theme": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "auto": "Auto",
+      "notifications": "Notifications",
+      "enableNotifications": "Enable Notifications",
+      "soundAlerts": "Sound Alerts"
+    },
+    "directories": {
+      "title": "Watch Directories",
+      "addDirectory": "Add Directory",
+      "removeDirectory": "Remove",
+      "path": "Path",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "browse": "Browse"
+    },
+    "indexing": {
+      "title": "Indexing Settings",
+      "schedule": "Schedule",
+      "fullIndexing": "Full Indexing",
+      "quickIndexing": "Quick Indexing",
+      "interval": "Interval",
+      "hours": "hours",
+      "minutes": "minutes",
+      "runNow": "Run Now",
+      "lastRun": "Last Run",
+      "nextRun": "Next Run"
+    },
+    "ai": {
+      "title": "AI Settings",
+      "model": "Model Selection",
+      "enableSmartSearch": "Enable Smart Search",
+      "enableContentAnalysis": "Enable Content Analysis",
+      "apiEndpoint": "API Endpoint",
+      "testConnection": "Test Connection"
+    },
+    "performance": {
+      "title": "Performance Settings",
+      "maxWorkers": "Max Workers",
+      "cacheSize": "Cache Size",
+      "memoryLimit": "Memory Limit",
+      "cpuLimit": "CPU Limit"
+    },
+    "actions": {
+      "save": "Save",
+      "reset": "Reset",
+      "export": "Export Settings",
+      "import": "Import Settings"
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Info",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "close": "Close",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "refresh": "Refresh",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "export": "Export",
+    "import": "Import",
+    "yes": "Yes",
+    "no": "No",
+    "all": "All",
+    "none": "None",
+    "select": "Select",
+    "selected": "Selected",
+    "items": "items",
+    "of": "of",
+    "to": "to",
+    "from": "from",
+    "ago": "ago",
+    "now": "Now",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow",
+    "week": "week",
+    "month": "month",
+    "year": "year",
+    "bytes": "Bytes",
+    "kb": "KB",
+    "mb": "MB",
+    "gb": "GB",
+    "tb": "TB"
+  },
+  "notifications": {
+    "fileSearchComplete": "File search completed",
+    "organizationComplete": "File organization completed",
+    "duplicatesFound": "Found {{count}} duplicate files",
+    "errorOccurred": "An error occurred: {{error}}",
+    "settingsSaved": "Settings saved successfully",
+    "indexingStarted": "Indexing started",
+    "indexingComplete": "Indexing completed"
+  },
+  "tooltips": {
+    "refreshData": "Refresh with latest data",
+    "viewDetails": "View detailed information",
+    "selectMultiple": "Select multiple files",
+    "dragToReorder": "Drag to reorder",
+    "clickToSort": "Click to sort",
+    "aiPowered": "AI-powered feature"
+  },
+  "dialogs": {
+    "confirmDelete": {
+      "title": "Confirm Delete",
+      "message": "Are you sure you want to delete {{count}} selected files?",
+      "warning": "This action cannot be undone."
+    },
+    "organizationWarning": {
+      "title": "File Organization Warning",
+      "message": "Starting file organization may move many files.",
+      "recommendation": "We recommend running a dry run first."
+    }
+  }
+}

@@ -4,6 +4,8 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { SnackbarProvider } from 'notistack';
+import { I18nextProvider } from 'react-i18next';
+import i18n from './i18n/i18n';
 
 import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard/Dashboard';
@@ -103,30 +105,32 @@ const theme = createTheme({
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <SnackbarProvider 
-          maxSnack={3}
-          anchorOrigin={{
-            vertical: 'bottom',
-            horizontal: 'right',
-          }}
-        >
-          <Router>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/explorer" element={<FileExplorer />} />
-                <Route path="/analytics" element={<Analytics />} />
-                <Route path="/organization" element={<Organization />} />
-                <Route path="/settings" element={<Settings />} />
-              </Routes>
-            </Layout>
-          </Router>
-        </SnackbarProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <SnackbarProvider 
+            maxSnack={3}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right',
+            }}
+          >
+            <Router>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/explorer" element={<FileExplorer />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/organization" element={<Organization />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Routes>
+              </Layout>
+            </Router>
+          </SnackbarProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </I18nextProvider>
   );
 }
 

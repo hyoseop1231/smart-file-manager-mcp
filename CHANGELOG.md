@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2025-07-09
+
+### Fixed
+- **🖼️ Vision Analysis**: Fixed image analysis in Docker container
+  - EnhancedLLMOrganizer now reads Ollama URL from environment variable
+  - Resolves connection errors when using llava:13b model for image analysis
+  - Vision features now work correctly for all supported image formats (.jpg, .jpeg, .png, .svg)
+
+## [2.1.0] - 2025-07-09
+
+### Added
+- **📚 Comprehensive Documentation**: Complete overhaul of all documentation
+  - Professional README with badges, TOC, and detailed examples
+  - API Reference with all endpoints documented
+  - Troubleshooting Guide for common issues
+  - Contributing Guidelines for developers
+  - One-line installation script
+
+### Fixed
+- **🔧 Periodic Indexing**: Fixed scheduler methods for proper background indexing
+  - Added missing `index_file` method to FileIndexer
+  - Fixed `get_recent_files` method reference
+  - Cleanup function now uses proper database optimization
+
 ## [2.0.0] - 2025-07-09
 
 ### 🎉 Major Release - Complete Rewrite with Enhanced Features

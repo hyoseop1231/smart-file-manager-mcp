@@ -475,24 +475,19 @@ class SmartFileManagerServer {
             // Convert file path to container path
             const containerPath = validatedArgs.filePath.replace("/Users/hyoseop1231", "/watch_directories");
             
-            // Use search to find and analyze the specific file
-            const searchArgs = {
-              query: `path:"${containerPath}"`,
-              use_llm: true,
-              limit: 1
+            // Use the new /analyze endpoint
+            const analyzeArgs = {
+              filePath: containerPath,
+              analysisType: validatedArgs.analysisType
             };
             
-            const response = await axios.post(`${AI_SERVICE_URL}/search`, searchArgs);
+            const response = await axios.post(`${AI_SERVICE_URL}/analyze`, analyzeArgs);
             
             return {
               content: [
                 {
                   type: "text",
-                  text: JSON.stringify({
-                    file_path: validatedArgs.filePath,
-                    analysis_type: validatedArgs.analysisType,
-                    result: response.data
-                  }, null, 2),
+                  text: JSON.stringify(response.data, null, 2),
                 },
               ],
             };
@@ -525,65 +520,20 @@ class SmartFileManagerServer {
           case "find_duplicates": {
             const validatedArgs = FindDuplicatesSchema.parse(args);
             
-            // Use search to find potential duplicates
-            const searchArgs = {
-              query: `size:>${validatedArgs.minSize}`,
-              use_llm: false,
-              limit: 1000
+            // Use the new /duplicates endpoint
+            const duplicateArgs = {
+              method: validatedArgs.method,
+              minSize: validatedArgs.minSize,
+              directories: validatedArgs.directories
             };
             
-            const response = await axios.post(`${AI_SERVICE_URL}/search`, searchArgs);
-            
-            // Simple duplicate detection based on method
-            const files = response.data.results || [];
-            const duplicates: any[] = [];
-            
-            if (validatedArgs.method === "name") {
-              const nameMap = new Map<string, any[]>();
-              files.forEach((file: any) => {
-                const name = file.metadata?.name || file.name;
-                if (!nameMap.has(name)) nameMap.set(name, []);
-                nameMap.get(name)!.push(file);
-              });
-              
-              nameMap.forEach((fileGroup, name) => {
-                if (fileGroup.length > 1) {
-                  duplicates.push({
-                    duplicate_type: "name",
-                    duplicate_key: name,
-                    files: fileGroup
-                  });
-                }
-              });
-            } else if (validatedArgs.method === "size") {
-              const sizeMap = new Map<number, any[]>();
-              files.forEach((file: any) => {
-                const size = file.metadata?.size || file.size;
-                if (!sizeMap.has(size)) sizeMap.set(size, []);
-                sizeMap.get(size)!.push(file);
-              });
-              
-              sizeMap.forEach((fileGroup, size) => {
-                if (fileGroup.length > 1) {
-                  duplicates.push({
-                    duplicate_type: "size",
-                    duplicate_key: `${size} bytes`,
-                    files: fileGroup
-                  });
-                }
-              });
-            }
+            const response = await axios.post(`${AI_SERVICE_URL}/duplicates`, duplicateArgs);
             
             return {
               content: [
                 {
                   type: "text",
-                  text: JSON.stringify({
-                    method: validatedArgs.method,
-                    directories: validatedArgs.directories,
-                    duplicates_found: duplicates.length,
-                    duplicates: duplicates.slice(0, 10) // Limit to first 10 for readability
-                  }, null, 2),
+                  text: JSON.stringify(response.data, null, 2),
                 },
               ],
             };

@@ -533,6 +533,107 @@ async def get_recent_files(hours: int = 24, limit: int = 50):
         "files": results
     }
 
+@app.post("/analyze")
+async def analyze_file(request: Request):
+    """Analyze a specific file using AI"""
+    try:
+        body = await request.json()
+        file_path = body.get("filePath")
+        analysis_type = body.get("analysisType", "smart")
+        
+        if not file_path:
+            return {"error": "filePath is required"}
+        
+        # Use enhanced LLM organizer for file analysis
+        if analysis_type == "smart":
+            result = await enhanced_llm_organizer.analyze_file_with_smart_selection(file_path)
+        else:
+            # For other types, use basic analysis
+            result = await enhanced_llm_organizer.analyze_file_with_smart_selection(file_path)
+        
+        return {
+            "success": True,
+            "file_path": file_path,
+            "analysis_type": analysis_type,
+            "result": result
+        }
+    except Exception as e:
+        logger.error(f"Error analyzing file: {e}")
+        return {"error": str(e)}
+
+@app.post("/duplicates")
+async def find_duplicates(request: Request):
+    """Find duplicate files"""
+    try:
+        body = await request.json()
+        method = body.get("method", "hash")
+        min_size = body.get("minSize", 0)
+        directories = body.get("directories", [])
+        
+        # Get all files from database
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        if method == "hash":
+            # Find duplicates by content hash
+            cursor.execute("""
+                SELECT content_hash, COUNT(*) as count, GROUP_CONCAT(path) as paths
+                FROM files 
+                WHERE content_hash IS NOT NULL 
+                AND content_hash != ''
+                AND size > ?
+                GROUP BY content_hash
+                HAVING COUNT(*) > 1
+                ORDER BY count DESC
+                LIMIT 100
+            """, (min_size,))
+        elif method == "size":
+            # Find duplicates by file size
+            cursor.execute("""
+                SELECT size, COUNT(*) as count, GROUP_CONCAT(path) as paths
+                FROM files 
+                WHERE size > ?
+                GROUP BY size
+                HAVING COUNT(*) > 1
+                ORDER BY count DESC
+                LIMIT 100
+            """, (min_size,))
+        elif method == "name":
+            # Find duplicates by file name
+            cursor.execute("""
+                SELECT name, COUNT(*) as count, GROUP_CONCAT(path) as paths
+                FROM files 
+                WHERE size > ?
+                GROUP BY name
+                HAVING COUNT(*) > 1
+                ORDER BY count DESC
+                LIMIT 100
+            """, (min_size,))
+        else:
+            return {"error": f"Unknown method: {method}"}
+        
+        results = cursor.fetchall()
+        conn.close()
+        
+        duplicates = []
+        for row in results:
+            key, count, paths = row
+            duplicates.append({
+                "duplicate_key": key,
+                "count": count,
+                "files": paths.split(",") if paths else []
+            })
+        
+        return {
+            "success": True,
+            "method": method,
+            "duplicates_found": len(duplicates),
+            "duplicates": duplicates
+        }
+    except Exception as e:
+        logger.error(f"Error finding duplicates: {e}")
+        return {"error": str(e)}
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8001))

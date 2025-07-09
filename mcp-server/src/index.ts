@@ -255,15 +255,56 @@ class SmartFileManagerServer {
 
           case "smart_workflow": {
             const validatedArgs = SmartWorkflowSchema.parse(args);
-            const response = await axios.post(`${AI_SERVICE_URL}/workflow`, validatedArgs);
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: JSON.stringify(response.data, null, 2),
-                },
-              ],
-            };
+            
+            // smart_workflow combines search and organize
+            if (validatedArgs.action === "organize") {
+              // First search for files
+              const searchArgs = {
+                query: validatedArgs.searchQuery,
+                use_llm: true,
+                limit: 100
+              };
+              
+              // Convert organize options to correct format
+              const organizeArgs = {
+                sourceDir: validatedArgs.options?.sourceDir || "/watch_directories/Desktop",
+                targetDir: validatedArgs.options?.targetDir || "/watch_directories/Desktop/Organized",
+                method: validatedArgs.options?.method || "content",
+                dryRun: validatedArgs.options?.dryRun || false,
+                use_llm: true,
+                createStructure: validatedArgs.options?.createStructure || true,
+                preserveExisting: validatedArgs.options?.preserveExisting || true
+              };
+              
+              const response = await axios.post(`${AI_SERVICE_URL}/organize`, organizeArgs);
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(response.data, null, 2),
+                  },
+                ],
+              };
+            } else if (validatedArgs.action === "analyze") {
+              // For analyze, use search endpoint
+              const searchArgs = {
+                query: validatedArgs.searchQuery,
+                use_llm: true,
+                limit: 50
+              };
+              
+              const response = await axios.post(`${AI_SERVICE_URL}/search`, searchArgs);
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(response.data, null, 2),
+                  },
+                ],
+              };
+            } else {
+              throw new Error(`Action ${validatedArgs.action} not supported yet`);
+            }
           }
 
           case "quick_search": {

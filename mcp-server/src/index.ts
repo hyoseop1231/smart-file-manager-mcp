@@ -240,9 +240,23 @@ class SmartFileManagerServer {
 
           case "organize_files": {
             const validatedArgs = OrganizeFilesSchema.parse(args);
-            // Enable LLM categorization
-            const enhancedArgs = { ...validatedArgs, use_llm: true };
-            const response = await axios.post(`${AI_SERVICE_URL}/organize`, enhancedArgs);
+            
+            // Map method names to match API expectations
+            const methodMap = {
+              "content": "content",
+              "date": "date", 
+              "type": "extension"
+            };
+            
+            const organizeArgs = {
+              sourceDir: validatedArgs.sourceDir,
+              targetDir: validatedArgs.targetDir,
+              method: methodMap[validatedArgs.method] || validatedArgs.method,
+              dryRun: validatedArgs.dryRun || false,
+              use_llm: validatedArgs.method === "content" ? true : false  // Only use LLM for content organization
+            };
+            
+            const response = await axios.post(`${AI_SERVICE_URL}/organize`, organizeArgs);
             return {
               content: [
                 {
@@ -309,25 +323,53 @@ class SmartFileManagerServer {
 
           case "quick_search": {
             const validatedArgs = QuickSearchSchema.parse(args);
-            let endpoint = "";
-            let payload: any = {};
+            
+            // Convert quick_search to regular search with appropriate query
+            let searchQuery = "";
+            let searchArgs: any = {
+              use_llm: false,  // Quick search doesn't need LLM
+              limit: validatedArgs.limit || 50
+            };
             
             if (validatedArgs.category) {
-              endpoint = `/category/${validatedArgs.category}`;
-              payload = { limit: validatedArgs.limit };
+              // Map category to search query
+              const categoryMap = {
+                "image": "type:image OR extension:.jpg OR extension:.png OR extension:.gif OR extension:.jpeg OR extension:.svg",
+                "video": "type:video OR extension:.mp4 OR extension:.avi OR extension:.mov OR extension:.mkv",
+                "audio": "type:audio OR extension:.mp3 OR extension:.wav OR extension:.flac OR extension:.aac",
+                "document": "type:document OR extension:.pdf OR extension:.doc OR extension:.docx OR extension:.txt OR extension:.md",
+                "code": "type:code OR extension:.py OR extension:.js OR extension:.java OR extension:.cpp OR extension:.html OR extension:.css",
+                "archive": "type:archive OR extension:.zip OR extension:.rar OR extension:.7z OR extension:.tar OR extension:.gz",
+                "other": "type:other"
+              };
+              searchQuery = categoryMap[validatedArgs.category] || `category:${validatedArgs.category}`;
             } else if (validatedArgs.extensions) {
-              endpoint = "/extension";
-              payload = validatedArgs.extensions;
+              // Convert extensions to search query
+              searchQuery = validatedArgs.extensions.map(ext => `extension:${ext}`).join(" OR ");
             } else if (validatedArgs.recentHours) {
-              endpoint = `/recent?hours=${validatedArgs.recentHours}&limit=${validatedArgs.limit}`;
+              // Use the /recent endpoint for recent files
+              const response = await axios.get(`${AI_SERVICE_URL}/recent`, {
+                params: {
+                  hours: validatedArgs.recentHours,
+                  limit: validatedArgs.limit || 50
+                }
+              });
+              
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(response.data, null, 2),
+                  },
+                ],
+              };
             } else {
               throw new Error("Must specify category, extensions, or recentHours");
             }
             
-            const response = await axios.get(`${AI_SERVICE_URL}${endpoint}`, {
-              params: payload.limit ? { limit: payload.limit } : undefined,
-              data: validatedArgs.extensions ? validatedArgs.extensions : undefined
-            });
+            // Use search endpoint for category and extension searches
+            searchArgs.query = searchQuery;
+            const response = await axios.post(`${AI_SERVICE_URL}/search`, searchArgs);
             
             return {
               content: [

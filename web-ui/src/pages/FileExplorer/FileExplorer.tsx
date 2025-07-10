@@ -283,7 +283,7 @@ const FileExplorer: React.FC = () => {
                   startIcon={<FilterIcon />}
                   onClick={() => setFilterOpen(!filterOpen)}
                 >
-                  Filters
+                  {t('fileExplorer.filters.title')}
                 </Button>
                 <IconButton
                   onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
@@ -295,7 +295,7 @@ const FileExplorer: React.FC = () => {
                     variant="outlined"
                     onClick={() => setActionMenuAnchor(document.body)}
                   >
-                    Actions ({selectedFiles.length})
+                    {t('fileExplorer.actions.batchActions')} ({selectedFiles.length})
                   </Button>
                 )}
               </Box>
@@ -307,7 +307,7 @@ const FileExplorer: React.FC = () => {
             <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               {categoryFilter !== 'all' && (
                 <Chip
-                  label={`Category: ${categoryFilter}`}
+                  label={`${t('fileExplorer.filters.fileType')}: ${t(`fileExplorer.filters.${categoryFilter}`)}`}
                   onDelete={() => setCategoryFilter('all')}
                   color="primary"
                   variant="outlined"
@@ -315,7 +315,7 @@ const FileExplorer: React.FC = () => {
               )}
               {sizeFilter !== 'all' && (
                 <Chip
-                  label={`Size: ${sizeFilter}`}
+                  label={`${t('fileExplorer.results.size')}: ${sizeFilter}`}
                   onDelete={() => setSizeFilter('all')}
                   color="primary"
                   variant="outlined"
@@ -323,14 +323,14 @@ const FileExplorer: React.FC = () => {
               )}
               {dateFilter !== 'all' && (
                 <Chip
-                  label={`Date: ${dateFilter}`}
+                  label={`${t('fileExplorer.filters.dateRange')}: ${t(`fileExplorer.filters.${dateFilter}`)}`}
                   onDelete={() => setDateFilter('all')}
                   color="primary"
                   variant="outlined"
                 />
               )}
               <Button size="small" onClick={clearFilters}>
-                Clear All
+                {t('fileExplorer.clearFilters')}
               </Button>
             </Box>
           )}
@@ -341,50 +341,50 @@ const FileExplorer: React.FC = () => {
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={3}>
                   <FormControl fullWidth size="small">
-                    <InputLabel>Category</InputLabel>
+                    <InputLabel>{t('fileExplorer.filters.fileType')}</InputLabel>
                     <Select
                       value={categoryFilter}
-                      label="Category"
+                      label={t('fileExplorer.filters.fileType')}
                       onChange={(e) => setCategoryFilter(e.target.value)}
                     >
-                      <MenuItem value="all">All Categories</MenuItem>
-                      <MenuItem value="document">Documents</MenuItem>
-                      <MenuItem value="image">Images</MenuItem>
-                      <MenuItem value="video">Videos</MenuItem>
-                      <MenuItem value="audio">Audio</MenuItem>
-                      <MenuItem value="code">Code</MenuItem>
-                      <MenuItem value="archive">Archives</MenuItem>
-                      <MenuItem value="other">Other</MenuItem>
+                      <MenuItem value="all">{t('fileExplorer.filters.all')}</MenuItem>
+                      <MenuItem value="document">{t('fileExplorer.filters.documents')}</MenuItem>
+                      <MenuItem value="image">{t('fileExplorer.filters.images')}</MenuItem>
+                      <MenuItem value="video">{t('fileExplorer.filters.videos')}</MenuItem>
+                      <MenuItem value="audio">{t('fileExplorer.filters.audio')}</MenuItem>
+                      <MenuItem value="code">{t('fileExplorer.filters.code')}</MenuItem>
+                      <MenuItem value="archive">{t('fileExplorer.filters.archives')}</MenuItem>
+                      <MenuItem value="other">{t('common.other') || 'Other'}</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
                   <FormControl fullWidth size="small">
-                    <InputLabel>Size</InputLabel>
+                    <InputLabel>{t('fileExplorer.filters.sizeRange')}</InputLabel>
                     <Select
                       value={sizeFilter}
-                      label="Size"
+                      label={t('fileExplorer.filters.sizeRange')}
                       onChange={(e) => setSizeFilter(e.target.value)}
                     >
-                      <MenuItem value="all">All Sizes</MenuItem>
-                      <MenuItem value="small">Small (&lt; 1MB)</MenuItem>
-                      <MenuItem value="medium">Medium (1-10MB)</MenuItem>
-                      <MenuItem value="large">Large (&gt; 10MB)</MenuItem>
+                      <MenuItem value="all">{t('common.all')}</MenuItem>
+                      <MenuItem value="small">{t('common.small') || 'Small'} (&lt; 1MB)</MenuItem>
+                      <MenuItem value="medium">{t('common.medium') || 'Medium'} (1-10MB)</MenuItem>
+                      <MenuItem value="large">{t('common.large') || 'Large'} (&gt; 10MB)</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
                   <FormControl fullWidth size="small">
-                    <InputLabel>Modified</InputLabel>
+                    <InputLabel>{t('fileExplorer.results.modified')}</InputLabel>
                     <Select
                       value={dateFilter}
-                      label="Modified"
+                      label={t('fileExplorer.results.modified')}
                       onChange={(e) => setDateFilter(e.target.value)}
                     >
-                      <MenuItem value="all">Any Time</MenuItem>
-                      <MenuItem value="today">Today</MenuItem>
-                      <MenuItem value="week">This Week</MenuItem>
-                      <MenuItem value="month">This Month</MenuItem>
+                      <MenuItem value="all">{t('common.all')}</MenuItem>
+                      <MenuItem value="today">{t('common.today')}</MenuItem>
+                      <MenuItem value="week">{t('fileExplorer.filters.lastWeek')}</MenuItem>
+                      <MenuItem value="month">{t('fileExplorer.filters.lastMonth')}</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -396,7 +396,7 @@ const FileExplorer: React.FC = () => {
                         onChange={(e) => setShowHidden(e.target.checked)}
                       />
                     }
-                    label="Show Hidden"
+                    label={t('fileExplorer.filters.showHidden') || 'Show Hidden'}
                   />
                 </Grid>
               </Grid>
@@ -417,20 +417,20 @@ const FileExplorer: React.FC = () => {
                 onChange={handleSelectAll}
               />
               <Typography variant="body2" color="text.secondary">
-                {totalFiles.toLocaleString()} files found
+                {t('fileExplorer.results.showing', { count: totalFiles })}
               </Typography>
             </Box>
             <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Sort by</InputLabel>
+              <InputLabel>{t('common.sort')}</InputLabel>
               <Select
                 value={sortBy}
-                label="Sort by"
+                label={t('common.sort')}
                 onChange={(e) => setSortBy(e.target.value)}
               >
-                <MenuItem value="modified">Modified</MenuItem>
-                <MenuItem value="name">Name</MenuItem>
-                <MenuItem value="size">Size</MenuItem>
-                <MenuItem value="type">Type</MenuItem>
+                <MenuItem value="modified">{t('fileExplorer.results.modified')}</MenuItem>
+                <MenuItem value="name">{t('fileExplorer.results.fileName')}</MenuItem>
+                <MenuItem value="size">{t('fileExplorer.results.size')}</MenuItem>
+                <MenuItem value="type">{t('common.type') || 'Type'}</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -513,7 +513,7 @@ const FileExplorer: React.FC = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Upload Files</DialogTitle>
+        <DialogTitle>{t('fileExplorer.actions.upload')}</DialogTitle>
         <DialogContent>
           <Box
             {...getRootProps()}
@@ -531,15 +531,15 @@ const FileExplorer: React.FC = () => {
             <input {...getInputProps()} />
             <UploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
             <Typography variant="h6" gutterBottom>
-              {isDragActive ? 'Drop files here' : 'Drag & drop files here'}
+              {isDragActive ? t('fileExplorer.dropFilesHere') || 'Drop files here' : t('fileExplorer.dragDropFiles') || 'Drag & drop files here'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              or click to select files
+              {t('fileExplorer.clickToSelect') || 'or click to select files'}
             </Typography>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setUploadDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setUploadDialogOpen(false)}>{t('common.cancel')}</Button>
         </DialogActions>
       </Dialog>
 
@@ -551,15 +551,15 @@ const FileExplorer: React.FC = () => {
       >
         <MenuItem onClick={() => {/* Handle download */}}>
           <ListItemIcon><DownloadIcon /></ListItemIcon>
-          Download
+          {t('common.download') || 'Download'}
         </MenuItem>
         <MenuItem onClick={() => {/* Handle share */}}>
           <ListItemIcon><ShareIcon /></ListItemIcon>
-          Share
+          {t('common.share') || 'Share'}
         </MenuItem>
         <MenuItem onClick={() => {/* Handle delete */}}>
           <ListItemIcon><DeleteIcon /></ListItemIcon>
-          Delete
+          {t('common.delete')}
         </MenuItem>
       </Menu>
     </Box>

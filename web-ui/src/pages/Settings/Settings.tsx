@@ -41,8 +41,10 @@ import {
   Settings as SettingsIcon,
   Info as InfoIcon,
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 
 const Settings: React.FC = () => {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState({
     // Storage Settings
     autoCleanup: true,
@@ -117,7 +119,7 @@ const Settings: React.FC = () => {
   return (
     <Box sx={{ flexGrow: 1 }}>
       <Typography variant="h4" component="h1" gutterBottom>
-        System Settings
+        {t('settings.title')}
       </Typography>
 
       <Grid container spacing={3}>
@@ -127,7 +129,7 @@ const Settings: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <StorageIcon color="primary" sx={{ mr: 1 }} />
-                <Typography variant="h6">Storage Management</Typography>
+                <Typography variant="h6">{t('settings.storage.title') || 'Storage Management'}</Typography>
               </Box>
 
               <FormControlLabel
@@ -137,11 +139,11 @@ const Settings: React.FC = () => {
                     onChange={(e) => handleSettingChange('autoCleanup', e.target.checked)}
                   />
                 }
-                label="Auto Cleanup Old Files"
+                label={t('settings.storage.autoCleanup') || 'Auto Cleanup Old Files'}
               />
 
               <Box sx={{ mt: 2 }}>
-                <Typography gutterBottom>Max Storage Size (GB)</Typography>
+                <Typography gutterBottom>{t('settings.storage.maxSize') || 'Max Storage Size (GB)'}</Typography>
                 <Slider
                   value={settings.maxStorageSize}
                   onChange={(e, value) => handleSettingChange('maxStorageSize', value)}
@@ -153,11 +155,11 @@ const Settings: React.FC = () => {
 
               <TextField
                 fullWidth
-                label="Retention Days"
+                label={t('settings.storage.retentionDays') || 'Retention Days'}
                 type="number"
                 value={settings.retentionDays}
                 onChange={(e) => handleSettingChange('retentionDays', parseInt(e.target.value))}
-                helperText="Days to keep old files before cleanup"
+                helperText={t('settings.storage.retentionHelperText') || 'Days to keep old files before cleanup'}
                 sx={{ mt: 2 }}
               />
 
@@ -168,7 +170,7 @@ const Settings: React.FC = () => {
                 sx={{ mt: 2 }}
                 fullWidth
               >
-                Clear Cache
+                {t('settings.storage.clearCache') || 'Clear Cache'}
               </Button>
             </CardContent>
           </Card>
@@ -180,7 +182,7 @@ const Settings: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <PerformanceIcon color="primary" sx={{ mr: 1 }} />
-                <Typography variant="h6">Performance</Typography>
+                <Typography variant="h6">{t('settings.performance.title')}</Typography>
               </Box>
 
               <FormControlLabel
@@ -190,11 +192,11 @@ const Settings: React.FC = () => {
                     onChange={(e) => handleSettingChange('enableCaching', e.target.checked)}
                   />
                 }
-                label="Enable Caching"
+                label={t('settings.performance.enableCaching') || 'Enable Caching'}
               />
 
               <Box sx={{ mt: 2 }}>
-                <Typography gutterBottom>Max Concurrent Jobs</Typography>
+                <Typography gutterBottom>{t('settings.performance.maxWorkers')}</Typography>
                 <Slider
                   value={settings.maxConcurrentJobs}
                   onChange={(e, value) => handleSettingChange('maxConcurrentJobs', value)}
@@ -206,7 +208,7 @@ const Settings: React.FC = () => {
               </Box>
 
               <Box sx={{ mt: 2 }}>
-                <Typography gutterBottom>Cache Size (MB)</Typography>
+                <Typography gutterBottom>{t('settings.performance.cacheSize')}</Typography>
                 <Slider
                   value={settings.cacheSize}
                   onChange={(e, value) => handleSettingChange('cacheSize', value)}
@@ -219,7 +221,7 @@ const Settings: React.FC = () => {
 
               <TextField
                 fullWidth
-                label="Indexing Interval (minutes)"
+                label={`${t('settings.indexing.interval')} (${t('common.minutes')})`}
                 type="number"
                 value={settings.indexingInterval}
                 onChange={(e) => handleSettingChange('indexingInterval', parseInt(e.target.value))}
@@ -235,7 +237,7 @@ const Settings: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <AnalyticsIcon color="primary" sx={{ mr: 1 }} />
-                <Typography variant="h6">AI Configuration</Typography>
+                <Typography variant="h6">{t('settings.ai.title')}</Typography>
               </Box>
 
               <FormControlLabel
@@ -245,14 +247,14 @@ const Settings: React.FC = () => {
                     onChange={(e) => handleSettingChange('enableAI', e.target.checked)}
                   />
                 }
-                label="Enable AI Features"
+                label={t('settings.ai.enableSmartSearch') || 'Enable AI Features'}
               />
 
               <FormControl fullWidth sx={{ mt: 2 }}>
-                <InputLabel>AI Model</InputLabel>
+                <InputLabel>{t('settings.ai.model')}</InputLabel>
                 <Select
                   value={settings.aiModel}
-                  label="AI Model"
+                  label={t('settings.ai.model')}
                   onChange={(e) => handleSettingChange('aiModel', e.target.value)}
                   disabled={!settings.enableAI}
                 >
@@ -263,10 +265,10 @@ const Settings: React.FC = () => {
               </FormControl>
 
               <FormControl fullWidth sx={{ mt: 2 }}>
-                <InputLabel>Embedding Model</InputLabel>
+                <InputLabel>{t('settings.ai.embeddingModel') || 'Embedding Model'}</InputLabel>
                 <Select
                   value={settings.embeddingModel}
-                  label="Embedding Model"
+                  label={t('settings.ai.embeddingModel') || 'Embedding Model'}
                   onChange={(e) => handleSettingChange('embeddingModel', e.target.value)}
                   disabled={!settings.enableAI}
                 >
@@ -277,7 +279,7 @@ const Settings: React.FC = () => {
 
               <TextField
                 fullWidth
-                label="Max Tokens"
+                label={t('settings.ai.maxTokens') || 'Max Tokens'}
                 type="number"
                 value={settings.maxTokens}
                 onChange={(e) => handleSettingChange('maxTokens', parseInt(e.target.value))}
@@ -294,7 +296,7 @@ const Settings: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <ScheduleIcon color="primary" sx={{ mr: 1 }} />
-                <Typography variant="h6">Automated Tasks</Typography>
+                <Typography variant="h6">{t('settings.scheduling.title') || 'Automated Tasks'}</Typography>
               </Box>
 
               <FormControlLabel
@@ -304,12 +306,12 @@ const Settings: React.FC = () => {
                     onChange={(e) => handleSettingChange('autoIndexing', e.target.checked)}
                   />
                 }
-                label="Enable Auto Indexing"
+                label={t('settings.indexing.enableAutoIndexing') || 'Enable Auto Indexing'}
               />
 
               <TextField
                 fullWidth
-                label="Full Index Interval (hours)"
+                label={`${t('settings.indexing.fullIndexing')} (${t('settings.indexing.hours')})`}
                 type="number"
                 value={settings.fullIndexInterval}
                 onChange={(e) => handleSettingChange('fullIndexInterval', parseInt(e.target.value))}
@@ -319,7 +321,7 @@ const Settings: React.FC = () => {
 
               <TextField
                 fullWidth
-                label="Quick Index Interval (minutes)"
+                label={`${t('settings.indexing.quickIndexing')} (${t('settings.indexing.minutes')})`}
                 type="number"
                 value={settings.quickIndexInterval}
                 onChange={(e) => handleSettingChange('quickIndexInterval', parseInt(e.target.value))}
@@ -329,7 +331,7 @@ const Settings: React.FC = () => {
 
               <TextField
                 fullWidth
-                label="Cleanup Interval (hours)"
+                label={`${t('settings.scheduling.cleanupInterval') || 'Cleanup Interval'} (${t('settings.indexing.hours')})`}
                 type="number"
                 value={settings.cleanupInterval}
                 onChange={(e) => handleSettingChange('cleanupInterval', parseInt(e.target.value))}
@@ -345,7 +347,7 @@ const Settings: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <NotificationsIcon color="primary" sx={{ mr: 1 }} />
-                <Typography variant="h6">Notifications</Typography>
+                <Typography variant="h6">{t('settings.general.notifications')}</Typography>
               </Box>
 
               <FormControlLabel
@@ -355,7 +357,7 @@ const Settings: React.FC = () => {
                     onChange={(e) => handleSettingChange('enableNotifications', e.target.checked)}
                   />
                 }
-                label="Enable Notifications"
+                label={t('settings.general.enableNotifications')}
               />
 
               <FormControlLabel
@@ -366,7 +368,7 @@ const Settings: React.FC = () => {
                     disabled={!settings.enableNotifications}
                   />
                 }
-                label="Notify on Task Completion"
+                label={t('settings.notifications.notifyOnCompletion') || 'Notify on Task Completion'}
               />
 
               <FormControlLabel
@@ -377,7 +379,7 @@ const Settings: React.FC = () => {
                     disabled={!settings.enableNotifications}
                   />
                 }
-                label="Notify on Errors"
+                label={t('settings.notifications.notifyOnErrors') || 'Notify on Errors'}
               />
 
               <FormControlLabel
@@ -388,7 +390,7 @@ const Settings: React.FC = () => {
                     disabled={!settings.enableNotifications}
                   />
                 }
-                label="Email Notifications"
+                label={t('settings.notifications.emailNotifications') || 'Email Notifications'}
               />
             </CardContent>
           </Card>
@@ -400,7 +402,7 @@ const Settings: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <SecurityIcon color="primary" sx={{ mr: 1 }} />
-                <Typography variant="h6">Security</Typography>
+                <Typography variant="h6">{t('settings.security.title') || 'Security'}</Typography>
               </Box>
 
               <FormControlLabel
@@ -410,7 +412,7 @@ const Settings: React.FC = () => {
                     onChange={(e) => handleSettingChange('enableEncryption', e.target.checked)}
                   />
                 }
-                label="Enable Data Encryption"
+                label={t('settings.security.enableEncryption') || 'Enable Data Encryption'}
               />
 
               <FormControlLabel
@@ -420,12 +422,12 @@ const Settings: React.FC = () => {
                     onChange={(e) => handleSettingChange('requireAuth', e.target.checked)}
                   />
                 }
-                label="Require Authentication"
+                label={t('settings.security.requireAuth') || 'Require Authentication'}
               />
 
               <TextField
                 fullWidth
-                label="Session Timeout (minutes)"
+                label={`${t('settings.security.sessionTimeout') || 'Session Timeout'} (${t('common.minutes')})`}
                 type="number"
                 value={settings.sessionTimeout}
                 onChange={(e) => handleSettingChange('sessionTimeout', parseInt(e.target.value))}
@@ -435,7 +437,7 @@ const Settings: React.FC = () => {
 
               <Alert severity="info" sx={{ mt: 2 }}>
                 <Typography variant="body2">
-                  Security features are currently in development.
+                  {t('settings.security.inDevelopment') || 'Security features are currently in development.'}
                 </Typography>
               </Alert>
             </CardContent>
@@ -447,7 +449,7 @@ const Settings: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                System Actions
+                {t('settings.systemActions.title') || 'System Actions'}
               </Typography>
               <Grid container spacing={2}>
                 <Grid item>
@@ -456,7 +458,7 @@ const Settings: React.FC = () => {
                     onClick={handleSaveSettings}
                     startIcon={<SettingsIcon />}
                   >
-                    Save Settings
+                    {t('settings.actions.save')}
                   </Button>
                 </Grid>
                 <Grid item>
@@ -465,7 +467,7 @@ const Settings: React.FC = () => {
                     onClick={() => setBackupDialogOpen(true)}
                     startIcon={<BackupIcon />}
                   >
-                    Backup Database
+                    {t('settings.systemActions.backupDatabase') || 'Backup Database'}
                   </Button>
                 </Grid>
                 <Grid item>
@@ -475,7 +477,7 @@ const Settings: React.FC = () => {
                     startIcon={<RefreshIcon />}
                     color="warning"
                   >
-                    Reset to Defaults
+                    {t('settings.actions.reset')}
                   </Button>
                 </Grid>
               </Grid>
@@ -488,27 +490,27 @@ const Settings: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                System Information
+                {t('settings.systemInfo.title') || 'System Information'}
               </Typography>
               <List>
                 <ListItem>
                   <ListItemIcon><InfoIcon /></ListItemIcon>
                   <ListItemText
-                    primary="Smart File Manager Version"
+                    primary={t('settings.systemInfo.version') || 'Smart File Manager Version'}
                     secondary="v2.1.1"
                   />
                 </ListItem>
                 <ListItem>
                   <ListItemIcon><StorageIcon /></ListItemIcon>
                   <ListItemText
-                    primary="Database Size"
+                    primary={t('settings.systemInfo.databaseSize') || 'Database Size'}
                     secondary="~50 MB (estimated)"
                   />
                 </ListItem>
                 <ListItem>
                   <ListItemIcon><PerformanceIcon /></ListItemIcon>
                   <ListItemText
-                    primary="Cache Size"
+                    primary={t('settings.systemInfo.cacheSize') || 'Cache Size'}
                     secondary={formatBytes(settings.cacheSize * 1024 * 1024)}
                   />
                 </ListItem>
@@ -523,19 +525,19 @@ const Settings: React.FC = () => {
         open={resetDialogOpen}
         onClose={() => setResetDialogOpen(false)}
       >
-        <DialogTitle>Reset Settings</DialogTitle>
+        <DialogTitle>{t('settings.dialogs.resetTitle') || 'Reset Settings'}</DialogTitle>
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 2 }}>
-            This will reset all settings to their default values. This action cannot be undone.
+            {t('settings.dialogs.resetWarning') || 'This will reset all settings to their default values. This action cannot be undone.'}
           </Alert>
           <Typography>
-            Are you sure you want to reset all settings to defaults?
+            {t('settings.dialogs.resetConfirm') || 'Are you sure you want to reset all settings to defaults?'}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setResetDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setResetDialogOpen(false)}>{t('common.cancel')}</Button>
           <Button onClick={handleResetSettings} color="warning" variant="contained">
-            Reset
+            {t('common.reset') || 'Reset'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -545,19 +547,19 @@ const Settings: React.FC = () => {
         open={backupDialogOpen}
         onClose={() => setBackupDialogOpen(false)}
       >
-        <DialogTitle>Backup Database</DialogTitle>
+        <DialogTitle>{t('settings.dialogs.backupTitle') || 'Backup Database'}</DialogTitle>
         <DialogContent>
           <Typography gutterBottom>
-            This will create a backup of your file index database and settings.
+            {t('settings.dialogs.backupDescription') || 'This will create a backup of your file index database and settings.'}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            The backup will be saved to your Downloads folder.
+            {t('settings.dialogs.backupLocation') || 'The backup will be saved to your Downloads folder.'}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setBackupDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setBackupDialogOpen(false)}>{t('common.cancel')}</Button>
           <Button onClick={handleBackupDatabase} color="primary" variant="contained">
-            Create Backup
+            {t('settings.actions.createBackup') || 'Create Backup'}
           </Button>
         </DialogActions>
       </Dialog>

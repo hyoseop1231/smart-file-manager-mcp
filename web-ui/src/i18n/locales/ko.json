@@ -81,6 +81,12 @@
       "batchActions": "일괄 작업",
       "newFolder": "새 폴더",
       "upload": "파일 업로드"
+    },
+    "dropFilesHere": "파일을 여기에 놓으세요",
+    "dragDropFiles": "파일을 드래그 앤 드롭하거나",
+    "clickToSelect": "클릭하여 파일 선택",
+    "filters": {
+      "showHidden": "숨김 파일 표시"
     }
   },
   "analytics": {
@@ -178,7 +184,31 @@
       "next": "다음",
       "apply": "적용",
       "undo": "실행 취소",
-      "viewReport": "보고서 보기"
+      "viewReport": "보고서 보기",
+      "preview": "미리보기"
+    },
+    "sourceHelperText": "정리할 파일이 있는 디렉토리",
+    "targetHelperText": "비워두면 소스에 'Organized' 폴더가 생성됩니다",
+    "options": {
+      "useAIEnhancement": "AI 향상 기능 사용"
+    },
+    "errors": {
+      "noPreviewData": "미리보기 데이터가 없습니다. 다시 시도해주세요.",
+      "noActiveTask": "활성 정리 작업이 없습니다."
+    },
+    "preview": {
+      "previewDescription": "{{fileCount}}개 파일이 {{categoryCount}}개 카테고리로 정리됩니다. 미리보기이며 아직 파일은 이동되지 않습니다."
+    },
+    "status": {
+      "title": "정리 상태"
+    },
+    "results": {
+      "summary": "결과 요약",
+      "foldersCreated": "생성된 폴더",
+      "dataOrganized": "정리된 데이터"
+    },
+    "systemActions": {
+      "title": "시스템 작업"
     }
   },
   "settings": {
@@ -235,7 +265,49 @@
       "save": "저장",
       "reset": "초기화",
       "export": "설정 내보내기",
-      "import": "설정 가져오기"
+      "import": "설정 가져오기",
+      "createBackup": "백업 생성"
+    },
+    "storage": {
+      "title": "저장소 관리",
+      "autoCleanup": "오래된 파일 자동 정리",
+      "maxSize": "최대 저장 크기 (GB)",
+      "retentionDays": "보관 일수",
+      "retentionHelperText": "정리 전 파일 보관 일수",
+      "clearCache": "캐시 지우기"
+    },
+    "scheduling": {
+      "title": "자동화 작업",
+      "cleanupInterval": "정리 간격"
+    },
+    "notifications": {
+      "notifyOnCompletion": "작업 완료 시 알림",
+      "notifyOnErrors": "오류 발생 시 알림",
+      "emailNotifications": "이메일 알림"
+    },
+    "security": {
+      "title": "보안",
+      "enableEncryption": "데이터 암호화 활성화",
+      "requireAuth": "인증 필요",
+      "sessionTimeout": "세션 타임아웃",
+      "inDevelopment": "보안 기능은 현재 개발 중입니다."
+    },
+    "systemInfo": {
+      "title": "시스템 정보",
+      "version": "스마트 파일 매니저 버전",
+      "databaseSize": "데이터베이스 크기",
+      "cacheSize": "캐시 크기"
+    },
+    "dialogs": {
+      "resetTitle": "설정 초기화",
+      "resetWarning": "모든 설정이 기본값으로 초기화됩니다. 이 작업은 되돌릴 수 없습니다.",
+      "resetConfirm": "정말로 모든 설정을 기본값으로 초기화하시겠습니까?",
+      "backupTitle": "데이터베이스 백업",
+      "backupDescription": "파일 인덱스 데이터베이스와 설정의 백업을 생성합니다.",
+      "backupLocation": "백업은 다운로드 폴더에 저장됩니다."
+    },
+    "systemActions": {
+      "backupDatabase": "데이터베이스 백업"
     }
   },
   "common": {
@@ -279,7 +351,26 @@
     "kb": "KB",
     "mb": "MB",
     "gb": "GB",
-    "tb": "TB"
+    "tb": "TB",
+    "minutes": "분",
+    "hours": "시간",
+    "files": "파일",
+    "download": "다운로드",
+    "share": "공유",
+    "type": "유형",
+    "reset": "초기화",
+    "optional": "(선택사항)",
+    "other": "기타",
+    "small": "작은",
+    "medium": "중간",
+    "large": "큰",
+    "andMore": "... 그리고 {{count}}개 더",
+    "started": "시작됨",
+    "completed": "완료됨",
+    "complete": "완료",
+    "processing": "처리 중...",
+    "errors": "오류",
+    "results": "결과"
   },
   "notifications": {
     "fileSearchComplete": "파일 검색이 완료되었습니다",
@@ -307,7 +398,9 @@
     "organizationWarning": {
       "title": "파일 정리 경고",
       "message": "파일 정리를 시작하면 많은 파일이 이동될 수 있습니다.",
-      "recommendation": "먼저 시험 실행을 수행하는 것을 권장합니다."
+      "recommendation": "먼저 시험 실행을 수행하는 것을 권장합니다.",
+      "cannotUndo": "이 작업은 쉽게 되돌릴 수 없습니다.",
+      "confirmProceed": "정말로 다음 위치에서 파일 정리를 진행하시겠습니까:"
     }
   }
 }

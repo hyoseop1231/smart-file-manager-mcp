@@ -45,6 +45,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation } from 'react-query';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 interface OrganizationTask {
   task_id: string;
@@ -57,6 +58,7 @@ interface OrganizationTask {
 }
 
 const Organization: React.FC = () => {
+  const { t } = useTranslation();
   const [activeStep, setActiveStep] = useState(0);
   const [sourceDir, setSourceDir] = useState('/Users/hyoseop1231/Desktop');
   const [targetDir, setTargetDir] = useState('');
@@ -67,7 +69,12 @@ const Organization: React.FC = () => {
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
-  const steps = ['Configure', 'Preview', 'Execute', 'Results'];
+  const steps = [
+    t('organization.steps.selectSource'),
+    t('organization.steps.preview'),
+    t('organization.steps.apply'),
+    t('common.results') || 'Results'
+  ];
 
   // Fetch active organization tasks
   const { data: activeTasks, refetch: refetchTasks } = useQuery(
@@ -150,9 +157,9 @@ const Organization: React.FC = () => {
 
   const getMethodDescription = (method: string) => {
     const descriptions = {
-      content: 'AI analyzes file content and organizes by topics and categories',
-      date: 'Organizes files by creation/modification date into year/month folders',
-      extension: 'Groups files by file type and extension',
+      content: t('organization.options.byContent'),
+      date: t('organization.options.byDate'),
+      extension: t('organization.options.byType'),
     };
     return descriptions[method as keyof typeof descriptions] || '';
   };
@@ -163,22 +170,22 @@ const Organization: React.FC = () => {
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
-              Source Configuration
+              {t('organization.sourceSelection.title')}
             </Typography>
             <TextField
               fullWidth
-              label="Source Directory"
+              label={t('organization.sourceSelection.selectDirectory')}
               value={sourceDir}
               onChange={(e) => setSourceDir(e.target.value)}
-              helperText="Directory containing files to organize"
+              helperText={t('organization.sourceHelperText') || 'Directory containing files to organize'}
               sx={{ mb: 2 }}
             />
             <TextField
               fullWidth
-              label="Target Directory (Optional)"
+              label={t('organization.options.targetDirectory') + ' ' + t('common.optional', '(Optional)')}
               value={targetDir}
               onChange={(e) => setTargetDir(e.target.value)}
-              helperText="Leave empty to create 'Organized' folder in source"
+              helperText={t('organization.targetHelperText') || "Leave empty to create 'Organized' folder in source"}
               sx={{ mb: 2 }}
             />
           </CardContent>
@@ -189,31 +196,31 @@ const Organization: React.FC = () => {
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
-              Organization Method
+              {t('organization.options.method')}
             </Typography>
             <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel>Method</InputLabel>
+              <InputLabel>{t('organization.options.method')}</InputLabel>
               <Select
                 value={organizationMethod}
-                label="Method"
+                label={t('organization.options.method')}
                 onChange={(e) => setOrganizationMethod(e.target.value)}
               >
                 <MenuItem value="content">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <AIIcon color="primary" />
-                    AI Content Analysis
+                    {t('organization.options.byContent')}
                   </Box>
                 </MenuItem>
                 <MenuItem value="date">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <ScheduleIcon color="primary" />
-                    Date-based
+                    {t('organization.options.byDate')}
                   </Box>
                 </MenuItem>
                 <MenuItem value="extension">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <SettingsIcon color="primary" />
-                    File Type
+                    {t('organization.options.byType')}
                   </Box>
                 </MenuItem>
               </Select>
@@ -231,7 +238,7 @@ const Organization: React.FC = () => {
                   disabled={organizationMethod !== 'content'}
                 />
               }
-              label="Use AI Enhancement"
+              label={t('organization.options.useAIEnhancement') || 'Use AI Enhancement'}
             />
           </CardContent>
         </Card>
@@ -240,7 +247,7 @@ const Organization: React.FC = () => {
       <Grid item xs={12}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
           <Button variant="outlined" onClick={handleReset}>
-            Reset
+            {t('common.reset') || 'Reset'}
           </Button>
           <Button
             variant="contained"
@@ -248,7 +255,7 @@ const Organization: React.FC = () => {
             disabled={!sourceDir || organizationMutation.isLoading}
             startIcon={<PreviewIcon />}
           >
-            Preview Organization
+            {t('organization.actions.preview') || 'Preview Organization'}
           </Button>
         </Box>
       </Grid>
@@ -260,7 +267,7 @@ const Organization: React.FC = () => {
       return (
         <Box sx={{ textAlign: 'center', py: 4 }}>
           <LinearProgress sx={{ mb: 2 }} />
-          <Typography>Analyzing files and generating preview...</Typography>
+          <Typography>{t('organization.progress.analyzing')}</Typography>
         </Box>
       );
     }
@@ -268,7 +275,7 @@ const Organization: React.FC = () => {
     if (!previewData?.results?.operations) {
       return (
         <Alert severity="error">
-          No preview data available. Please try again.
+          {t('organization.errors.noPreviewData') || 'No preview data available. Please try again.'}
         </Alert>
       );
     }
@@ -286,8 +293,10 @@ const Organization: React.FC = () => {
     return (
       <Box>
         <Alert severity="info" sx={{ mb: 3 }}>
-          Preview shows {operations.length} files will be organized into {Object.keys(groupedOperations).length} categories.
-          This is a preview only - no files will be moved yet.
+          {t('organization.preview.previewDescription', { 
+            fileCount: operations.length, 
+            categoryCount: Object.keys(groupedOperations).length 
+          }) || `Preview shows ${operations.length} files will be organized into ${Object.keys(groupedOperations).length} categories. This is a preview only - no files will be moved yet.`}
         </Alert>
 
         <Grid container spacing={2}>
@@ -298,7 +307,7 @@ const Organization: React.FC = () => {
                   <FolderIcon color="primary" sx={{ mr: 1 }} />
                   <Typography variant="h6">{folder}</Typography>
                   <Chip
-                    label={`${ops.length} files`}
+                    label={`${ops.length} ${t('common.files') || 'files'}`}
                     size="small"
                     sx={{ ml: 'auto' }}
                   />
@@ -318,7 +327,7 @@ const Organization: React.FC = () => {
                   {ops.length > 5 && (
                     <ListItem>
                       <ListItemText
-                        primary={`... and ${ops.length - 5} more files`}
+                        primary={t('common.andMore', { count: ops.length - 5 }) || `... and ${ops.length - 5} more files`}
                         primaryTypographyProps={{ 
                           variant: 'body2', 
                           color: 'text.secondary',
@@ -335,7 +344,7 @@ const Organization: React.FC = () => {
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
           <Button variant="outlined" onClick={() => setActiveStep(0)}>
-            Back to Configuration
+            {t('organization.actions.back')}
           </Button>
           <Button
             variant="contained"
@@ -343,7 +352,7 @@ const Organization: React.FC = () => {
             startIcon={<StartIcon />}
             color="warning"
           >
-            Execute Organization
+            {t('organization.actions.apply')}
           </Button>
         </Box>
       </Box>
@@ -356,7 +365,7 @@ const Organization: React.FC = () => {
     if (!currentTask) {
       return (
         <Alert severity="error">
-          No active organization task found.
+          {t('organization.errors.noActiveTask') || 'No active organization task found.'}
         </Alert>
       );
     }
@@ -367,7 +376,7 @@ const Organization: React.FC = () => {
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
               <Typography variant="h6">
-                Organization Status
+                {t('organization.status.title') || 'Organization Status'}
               </Typography>
               <Chip
                 label={currentTask.status}
@@ -389,15 +398,15 @@ const Organization: React.FC = () => {
                   value={currentTask.progress}
                 />
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  {currentTask.progress ? `${currentTask.progress}% complete` : 'Processing...'}
+                  {currentTask.progress ? `${currentTask.progress}% ${t('common.complete') || 'complete'}` : t('common.processing') || 'Processing...'}
                 </Typography>
               </Box>
             )}
 
             <Typography variant="body2" color="text.secondary">
-              Started: {new Date(currentTask.started_at).toLocaleString()}
+              {t('common.started') || 'Started'}: {new Date(currentTask.started_at).toLocaleString()}
               {currentTask.completed_at && (
-                <><br />Completed: {new Date(currentTask.completed_at).toLocaleString()}</>
+                <><br />{t('common.completed') || 'Completed'}: {new Date(currentTask.completed_at).toLocaleString()}</>
               )}
             </Typography>
           </CardContent>
@@ -407,7 +416,7 @@ const Organization: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Results Summary
+                {t('organization.results.summary') || 'Results Summary'}
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={3}>
@@ -416,7 +425,7 @@ const Organization: React.FC = () => {
                       {currentTask.results.files_moved || 0}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Files Organized
+                      {t('organization.progress.filesOrganized', { count: currentTask.results.files_moved || 0 })}
                     </Typography>
                   </Paper>
                 </Grid>
@@ -426,7 +435,7 @@ const Organization: React.FC = () => {
                       {currentTask.results.folders_created || 0}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Folders Created
+                      {t('organization.results.foldersCreated') || 'Folders Created'}
                     </Typography>
                   </Paper>
                 </Grid>
@@ -436,7 +445,7 @@ const Organization: React.FC = () => {
                       {formatBytes(currentTask.results.total_size || 0)}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Data Organized
+                      {t('organization.results.dataOrganized') || 'Data Organized'}
                     </Typography>
                   </Paper>
                 </Grid>
@@ -446,7 +455,7 @@ const Organization: React.FC = () => {
                       {currentTask.results.errors || 0}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Errors
+                      {t('common.errors') || 'Errors'}
                     </Typography>
                   </Paper>
                 </Grid>
@@ -457,18 +466,18 @@ const Organization: React.FC = () => {
 
         {currentTask.status === 'failed' && (
           <Alert severity="error">
-            Organization failed: {currentTask.error}
+            {t('organization.progress.error')}: {currentTask.error}
           </Alert>
         )}
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
           <Button variant="outlined" onClick={() => refetchTasks()}>
             <RefreshIcon sx={{ mr: 1 }} />
-            Refresh Status
+            {t('common.refresh')}
           </Button>
           {currentTask.status !== 'running' && (
             <Button variant="contained" onClick={handleReset}>
-              New Organization
+              {t('organization.actions.startOrganizing')}
             </Button>
           )}
         </Box>
@@ -494,7 +503,7 @@ const Organization: React.FC = () => {
   return (
     <Box sx={{ flexGrow: 1 }}>
       <Typography variant="h4" component="h1" gutterBottom>
-        AI-Powered File Organization
+        {t('organization.title')}
       </Typography>
 
       <Card sx={{ mb: 3 }}>
@@ -517,21 +526,21 @@ const Organization: React.FC = () => {
         onClose={() => setConfirmDialogOpen(false)}
       >
         <DialogTitle>
-          Confirm File Organization
+          {t('dialogs.organizationWarning.title')}
         </DialogTitle>
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 2 }}>
-            This will move {previewData?.results?.operations?.length || 0} files. 
-            This action cannot be easily undone.
+            {t('dialogs.organizationWarning.message')} {previewData?.results?.operations?.length || 0} {t('common.files') || 'files'}.
+            {t('dialogs.organizationWarning.cannotUndo') || 'This action cannot be easily undone.'}
           </Alert>
           <Typography>
-            Are you sure you want to proceed with organizing files from:
+            {t('dialogs.organizationWarning.confirmProceed') || 'Are you sure you want to proceed with organizing files from:'}
           </Typography>
           <Typography variant="body2" sx={{ mt: 1, fontFamily: 'monospace' }}>
             {sourceDir}
           </Typography>
           <Typography sx={{ mt: 1 }}>
-            to:
+            {t('common.to')}:
           </Typography>
           <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
             {targetDir || `${sourceDir}/Organized`}
@@ -539,7 +548,7 @@ const Organization: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmDialogOpen(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             variant="contained"
@@ -547,7 +556,7 @@ const Organization: React.FC = () => {
             onClick={handleExecute}
             disabled={organizationMutation.isLoading}
           >
-            Yes, Organize Files
+            {t('common.yes')}, {t('organization.actions.startOrganizing')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -58,6 +58,7 @@ import {
   Treemap,
 } from 'recharts';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 interface DuplicateGroup {
   duplicate_key: string;
@@ -66,6 +67,7 @@ interface DuplicateGroup {
 }
 
 const Analytics: React.FC = () => {
+  const { t } = useTranslation();
   const [duplicateMethod, setDuplicateMethod] = useState('hash');
   const [minSize, setMinSize] = useState(1000);
   const [selectedDuplicates, setSelectedDuplicates] = useState<string[]>([]);
@@ -186,7 +188,7 @@ const Analytics: React.FC = () => {
     <Box sx={{ flexGrow: 1 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" component="h1">
-          File Analytics & Insights
+          {t('analytics.title')}
         </Typography>
         <Button
           variant="outlined"
@@ -195,7 +197,7 @@ const Analytics: React.FC = () => {
             refetchDuplicates();
           }}
         >
-          Refresh Data
+          {t('analytics.refreshData')}
         </Button>
       </Box>
 
@@ -207,7 +209,7 @@ const Analytics: React.FC = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
                   <Typography color="textSecondary" gutterBottom variant="h6">
-                    Duplicates Found
+                    {t('analytics.duplicatesFound')}
                   </Typography>
                   <Typography variant="h4">
                     {duplicatesData?.duplicates_found || 0}
@@ -225,7 +227,7 @@ const Analytics: React.FC = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
                   <Typography color="textSecondary" gutterBottom variant="h6">
-                    Potential Savings
+                    {t('analytics.potentialSavings')}
                   </Typography>
                   <Typography variant="h4">
                     {formatBytes(potentialSavings)}
@@ -243,7 +245,7 @@ const Analytics: React.FC = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
                   <Typography color="textSecondary" gutterBottom variant="h6">
-                    Avg CPU Usage
+                    {t('analytics.avgCpuUsage')}
                   </Typography>
                   <Typography variant="h4">
                     {metricsData?.system_metrics?.cpu_percent?.average?.toFixed(1) || 0}%
@@ -261,7 +263,7 @@ const Analytics: React.FC = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
                   <Typography color="textSecondary" gutterBottom variant="h6">
-                    Active Files
+                    {t('analytics.activeFiles')}
                   </Typography>
                   <Typography variant="h4">
                     {recentFiles?.count || 0}
@@ -279,29 +281,29 @@ const Analytics: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
-                  Duplicate File Detection
+                  {t('analytics.duplicateDetection.title')}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <FormControl size="small" sx={{ minWidth: 120 }}>
-                    <InputLabel>Method</InputLabel>
+                    <InputLabel>{t('analytics.duplicateDetection.method')}</InputLabel>
                     <Select
                       value={duplicateMethod}
                       label="Method"
                       onChange={(e) => setDuplicateMethod(e.target.value)}
                     >
-                      <MenuItem value="hash">Content Hash</MenuItem>
-                      <MenuItem value="name">File Name</MenuItem>
-                      <MenuItem value="size">File Size</MenuItem>
+                      <MenuItem value="hash">{t('analytics.duplicateDetection.contentHash')}</MenuItem>
+                      <MenuItem value="name">{t('analytics.duplicateDetection.fileName')}</MenuItem>
+                      <MenuItem value="size">{t('analytics.duplicateDetection.fileSize')}</MenuItem>
                     </Select>
                   </FormControl>
                   <FormControl size="small" sx={{ minWidth: 120 }}>
-                    <InputLabel>Min Size</InputLabel>
+                    <InputLabel>{t('analytics.duplicateDetection.minSize')}</InputLabel>
                     <Select
                       value={minSize}
                       label="Min Size"
                       onChange={(e) => setMinSize(Number(e.target.value))}
                     >
-                      <MenuItem value={0}>All Files</MenuItem>
+                      <MenuItem value={0}>{t('analytics.duplicateDetection.allFiles')}</MenuItem>
                       <MenuItem value={1024}>1 KB+</MenuItem>
                       <MenuItem value={1048576}>1 MB+</MenuItem>
                       <MenuItem value={10485760}>10 MB+</MenuItem>
@@ -319,8 +321,8 @@ const Analytics: React.FC = () => {
               ) : duplicateGroups.length > 0 ? (
                 <Box>
                   <Alert severity="info" sx={{ mb: 2 }}>
-                    Found {duplicateGroups.length} duplicate groups. 
-                    Potential savings: {formatBytes(potentialSavings)}
+                    {t('notifications.duplicatesFound', { count: duplicateGroups.length })}
+                    {' '}{t('analytics.potentialSavings')}: {formatBytes(potentialSavings)}
                   </Alert>
                   <List>
                     {duplicateGroups.slice(0, 10).map((group: DuplicateGroup, index: number) => (
@@ -340,12 +342,12 @@ const Analytics: React.FC = () => {
                           primary={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Typography variant="body1">
-                                {duplicateMethod === 'hash' ? 'Identical Content' :
+                                {duplicateMethod === 'hash' ? t('analytics.duplicateDetection.identicalContent') :
                                  duplicateMethod === 'name' ? group.duplicate_key :
                                  formatBytes(Number(group.duplicate_key))}
                               </Typography>
                               <Chip
-                                label={`${group.count} files`}
+                                label={`${group.count} ${t('common.items')}`}
                                 size="small"
                                 color="warning"
                               />
@@ -373,7 +375,7 @@ const Analytics: React.FC = () => {
                 </Box>
               ) : (
                 <Alert severity="success">
-                  No duplicates found with current criteria.
+                  {t('analytics.duplicateDetection.noDuplicates')}
                 </Alert>
               )}
             </CardContent>
@@ -385,7 +387,7 @@ const Analytics: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                System Performance
+                {t('analytics.systemPerformance.title')}
               </Typography>
               {performanceData.length > 0 ? (
                 <Box>
@@ -411,10 +413,10 @@ const Analytics: React.FC = () => {
                       />
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
                         <Typography variant="caption" color="text.secondary">
-                          Avg: {metric.average.toFixed(1)}%
+                          {t('analytics.systemPerformance.average')}: {metric.average.toFixed(1)}%
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          Peak: {metric.max.toFixed(1)}%
+                          {t('analytics.systemPerformance.peak')}: {metric.max.toFixed(1)}%
                         </Typography>
                       </Box>
                     </Box>
@@ -432,7 +434,7 @@ const Analytics: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                File Activity Trends (Last 7 Days)
+                {t('analytics.fileActivityTrends.title')}
               </Typography>
               {activityData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
@@ -451,7 +453,7 @@ const Analytics: React.FC = () => {
                       stroke="#1976D2"
                       fill="#1976D2"
                       fillOpacity={0.3}
-                      name="Files Modified"
+                      name={t('analytics.fileActivityTrends.filesModified')}
                     />
                     <Area
                       yAxisId="right"
@@ -461,7 +463,7 @@ const Analytics: React.FC = () => {
                       stroke="#00796B"
                       fill="#00796B"
                       fillOpacity={0.3}
-                      name="Data Volume (bytes)"
+                      name={t('analytics.fileActivityTrends.dataVolume')}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -478,7 +480,7 @@ const Analytics: React.FC = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom color="warning.main">
-                  Performance Insights & Recommendations
+                  {t('analytics.insights.title')}
                 </Typography>
                 <List>
                   {metricsData.issues.map((issue: string, index: number) => (
@@ -504,7 +506,7 @@ const Analytics: React.FC = () => {
         fullWidth
       >
         <DialogTitle>
-          Duplicate Files Preview
+          {t('analytics.duplicateDetection.preview')}
         </DialogTitle>
         <DialogContent>
           <List>
@@ -523,10 +525,10 @@ const Analytics: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setPreviewDialogOpen(false)}>
-            Close
+            {t('common.close')}
           </Button>
           <Button variant="contained" color="error" startIcon={<DeleteIcon />}>
-            Delete Duplicates
+            {t('analytics.duplicateDetection.deleteDuplicates')}
           </Button>
         </DialogActions>
       </Dialog>

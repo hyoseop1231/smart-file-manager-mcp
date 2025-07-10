@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import { SnackbarProvider } from 'notistack';
 import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n/i18n';
+import './config/axios'; // Initialize axios configuration
 
 import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard/Dashboard';

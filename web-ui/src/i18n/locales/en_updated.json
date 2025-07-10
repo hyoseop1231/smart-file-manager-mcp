@@ -55,7 +55,8 @@
       "lastDay": "Last 24 Hours",
       "lastWeek": "Last Week",
       "lastMonth": "Last Month",
-      "custom": "Custom"
+      "custom": "Custom",
+      "showHidden": "showHidden"
     },
     "results": {
       "showing": "Showing {{count}} results",
@@ -82,12 +83,9 @@
       "newFolder": "New Folder",
       "upload": "Upload Files"
     },
-    "dropFilesHere": "Drop files here",
-    "dragDropFiles": "Drag & drop files here",
-    "clickToSelect": "or click to select files",
-    "filters": {
-      "showHidden": "Show Hidden Files"
-    }
+    "dropFilesHere": "dropFilesHere",
+    "dragDropFiles": "dragDropFiles",
+    "clickToSelect": "clickToSelect"
   },
   "analytics": {
     "title": "File Analytics & Insights",
@@ -157,7 +155,8 @@
       "createSubfolders": "Create Subfolders",
       "handleDuplicates": "Handle Duplicates",
       "dryRun": "Dry Run (No files moved)",
-      "preserveOriginal": "Preserve Original"
+      "preserveOriginal": "Preserve Original",
+      "useAIEnhancement": "useAIEnhancement"
     },
     "preview": {
       "title": "Organization Preview",
@@ -167,7 +166,8 @@
       "fileCount": "File Count",
       "from": "From",
       "to": "To",
-      "willBeMoved": "Will be moved"
+      "willBeMoved": "Will be moved",
+      "previewDescription": "previewDescription"
     },
     "progress": {
       "organizing": "Organizing files...",
@@ -185,30 +185,24 @@
       "apply": "Apply",
       "undo": "Undo",
       "viewReport": "View Report",
-      "preview": "Preview Organization"
+      "preview": "preview"
     },
-    "sourceHelperText": "Directory containing files to organize",
-    "targetHelperText": "Leave empty to create 'Organized' folder in source",
-    "options": {
-      "useAIEnhancement": "Use AI Enhancement"
-    },
+    "sourceHelperText": "sourceHelperText",
+    "targetHelperText": "targetHelperText",
     "errors": {
-      "noPreviewData": "No preview data available. Please try again.",
-      "noActiveTask": "No active organization task found."
-    },
-    "preview": {
-      "previewDescription": "Preview shows {{fileCount}} files will be organized into {{categoryCount}} categories. This is a preview only - no files will be moved yet."
+      "noPreviewData": "noPreviewData",
+      "noActiveTask": "noActiveTask"
     },
     "status": {
-      "title": "Organization Status"
+      "title": "title"
     },
     "results": {
-      "summary": "Results Summary",
-      "foldersCreated": "Folders Created",
-      "dataOrganized": "Data Organized"
+      "summary": "summary",
+      "foldersCreated": "foldersCreated",
+      "dataOrganized": "dataOrganized"
     },
     "systemActions": {
-      "title": "System Actions"
+      "title": "title"
     }
   },
   "settings": {
@@ -244,8 +238,7 @@
       "minutes": "minutes",
       "runNow": "Run Now",
       "lastRun": "Last Run",
-      "nextRun": "Next Run",
-      "enableAutoIndexing": "Enable Auto Indexing"
+      "nextRun": "Next Run"
     },
     "ai": {
       "title": "AI Settings",
@@ -253,65 +246,62 @@
       "enableSmartSearch": "Enable Smart Search",
       "enableContentAnalysis": "Enable Content Analysis",
       "apiEndpoint": "API Endpoint",
-      "testConnection": "Test Connection",
-      "embeddingModel": "Embedding Model",
-      "maxTokens": "Max Tokens"
+      "testConnection": "Test Connection"
     },
     "performance": {
       "title": "Performance Settings",
       "maxWorkers": "Max Workers",
       "cacheSize": "Cache Size",
       "memoryLimit": "Memory Limit",
-      "cpuLimit": "CPU Limit",
-      "enableCaching": "Enable Caching"
+      "cpuLimit": "CPU Limit"
     },
     "actions": {
       "save": "Save",
       "reset": "Reset",
       "export": "Export Settings",
       "import": "Import Settings",
-      "createBackup": "Create Backup"
+      "createBackup": "createBackup"
     },
     "storage": {
-      "title": "Storage Management",
-      "autoCleanup": "Auto Cleanup Old Files",
-      "maxSize": "Max Storage Size (GB)",
-      "retentionDays": "Retention Days",
-      "retentionHelperText": "Days to keep old files before cleanup",
-      "clearCache": "Clear Cache"
+      "title": "title",
+      "autoCleanup": "autoCleanup",
+      "maxSize": "maxSize",
+      "retentionDays": "retentionDays",
+      "retentionHelperText": "retentionHelperText",
+      "clearCache": "clearCache"
     },
     "scheduling": {
-      "title": "Automated Tasks",
-      "cleanupInterval": "Cleanup Interval"
+      "title": "title",
+      "cleanupInterval": "cleanupInterval"
     },
     "notifications": {
-      "notifyOnCompletion": "Notify on Task Completion",
-      "notifyOnErrors": "Notify on Errors",
-      "emailNotifications": "Email Notifications"
+      "notifyOnCompletion": "notifyOnCompletion",
+      "notifyOnErrors": "notifyOnErrors",
+      "emailNotifications": "emailNotifications"
     },
     "security": {
-      "title": "Security",
-      "enableEncryption": "Enable Data Encryption",
-      "requireAuth": "Require Authentication",
-      "sessionTimeout": "Session Timeout",
-      "inDevelopment": "Security features are currently in development."
+      "title": "title",
+      "enableEncryption": "enableEncryption",
+      "requireAuth": "requireAuth",
+      "sessionTimeout": "sessionTimeout",
+      "inDevelopment": "inDevelopment"
     },
     "systemInfo": {
-      "title": "System Information",
-      "version": "Smart File Manager Version",
-      "databaseSize": "Database Size",
-      "cacheSize": "Cache Size"
+      "title": "title",
+      "version": "version",
+      "databaseSize": "databaseSize",
+      "cacheSize": "cacheSize"
     },
     "dialogs": {
-      "resetTitle": "Reset Settings",
-      "resetWarning": "This will reset all settings to their default values. This action cannot be undone.",
-      "resetConfirm": "Are you sure you want to reset all settings to defaults?",
-      "backupTitle": "Backup Database",
-      "backupDescription": "This will create a backup of your file index database and settings.",
-      "backupLocation": "The backup will be saved to your Downloads folder."
+      "resetTitle": "resetTitle",
+      "resetWarning": "resetWarning",
+      "resetConfirm": "resetConfirm",
+      "backupTitle": "backupTitle",
+      "backupDescription": "backupDescription",
+      "backupLocation": "backupLocation"
     },
     "systemActions": {
-      "backupDatabase": "Backup Database"
+      "backupDatabase": "backupDatabase"
     }
   },
   "common": {
@@ -359,22 +349,22 @@
     "minutes": "minutes",
     "hours": "hours",
     "files": "files",
-    "download": "Download",
-    "share": "Share",
-    "type": "Type",
-    "reset": "Reset",
-    "optional": "(Optional)",
-    "other": "Other",
-    "small": "Small",
-    "medium": "Medium",
-    "large": "Large",
-    "andMore": "... and {{count}} more",
-    "started": "Started",
-    "completed": "Completed",
+    "download": "download",
+    "share": "share",
+    "type": "type",
+    "reset": "reset",
+    "optional": "optional",
+    "other": "other",
+    "small": "small",
+    "medium": "medium",
+    "large": "large",
+    "andMore": "andMore",
+    "started": "started",
+    "completed": "completed",
     "complete": "complete",
-    "processing": "Processing...",
-    "errors": "Errors",
-    "results": "Results"
+    "processing": "processing",
+    "errors": "errors",
+    "results": "results"
   },
   "notifications": {
     "fileSearchComplete": "File search completed",
@@ -403,8 +393,8 @@
       "title": "File Organization Warning",
       "message": "Starting file organization may move many files.",
       "recommendation": "We recommend running a dry run first.",
-      "cannotUndo": "This action cannot be easily undone.",
-      "confirmProceed": "Are you sure you want to proceed with organizing files from:"
+      "cannotUndo": "cannotUndo",
+      "confirmProceed": "confirmProceed"
     }
   }
 }

@@ -5,9 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.2.0] - 2025-01-09
+## [2.3.0] - 2025-01-09
 
 ### Added
+- **🇰🇷 완전한 한국어 지원**: Korean language as default with English toggle
+  - 모든 UI 요소의 한국어 번역 (100+ translation keys)
+  - Language switcher with flag icons in header
+  - Korean date formatting with proper locale support
+  - Language preference saved to localStorage
+  - Seamless language switching without page reload
 - **🖥️ Web UI Dashboard**: Complete React-based monitoring and control interface
   - Real-time system metrics with interactive charts (CPU, Memory, Disk)
   - File Explorer with advanced search and batch operations
@@ -20,30 +26,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `find_duplicates`: Advanced duplicate detection with multiple methods
   - `batch_operation`: Process multiple files in a single operation
 - **🚀 Web UI Features**:
-  - Material-UI based modern design system
+  - Material-UI based modern design system with Korean support
   - React Query for efficient data fetching and caching
   - Recharts for beautiful data visualizations
   - Real-time updates with automatic refresh
   - Responsive design for all screen sizes
-- **🔧 Infrastructure Improvements**:
-  - Nginx reverse proxy for production deployment
-  - Port conflict detection and automatic resolution
-  - Enhanced Docker Compose configuration for web UI
-  - Development mode with hot reload support
+  - Toast notifications with Korean/English messages
+
+### Enhanced
+- **파일 정리 기능 완전 작동**: Fully functional file organization
+  - AI-powered categorization with preview mode
+  - Background task monitoring with progress tracking
+  - Multiple organization methods (content, date, file type)
+  - Dry-run capability to preview changes before applying
+  - Real-time progress updates and error handling
+- **모든 버튼 기능화**: All buttons now functional
+  - Dashboard cards clickable to navigate to relevant pages
+  - File Explorer search with Enter key support and clear button
+  - File analysis action with API integration
+  - Proper error handling with translated messages
 
 ### Changed
+- Default language set to Korean (한국어) with English fallback
 - Default web UI port changed from 3000 to 3002 to avoid common conflicts
 - Improved MCP server endpoint mappings for all functions
-- Enhanced error handling with detailed error messages
+- Enhanced error handling with multilingual error messages
 - Optimized API response formats for consistency
 
 ### Fixed
+- Fixed Korean translations not applying to all pages
+- Added useTranslation hooks to all components (Analytics, FileExplorer, Organization, Settings)
 - Fixed 404 errors on all MCP function calls
 - Corrected `smart_workflow` endpoint mapping from `/workflow` to `/organize`
 - Fixed `quick_search` to use proper query parameters instead of path parameters
 - Resolved TypeScript compilation errors in web UI
 - Fixed Recharts TreeMap vs Treemap import issue
 - Improved port availability checking in startup scripts
+
+### Technical Details
+- Added i18next, react-i18next, and i18next-browser-languagedetector
+- Enhanced Korean translation files with technical terminology
+- Proper axios configuration with base URL setup
+- Request/response interceptors for error handling
 
 ## [2.1.1] - 2025-07-09
 

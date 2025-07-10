@@ -6,9 +6,9 @@
 [![Claude Desktop](https://img.shields.io/badge/Claude%20Desktop-Compatible-green.svg)](https://claude.ai)
 [![MCP Protocol](https://img.shields.io/badge/MCP-v1.0-purple.svg)](https://github.com/modelcontextprotocol)
 
-**AI-powered file management system with native Claude Desktop integration - Transform how you manage files with natural language**
+**AI 기반 파일 관리 시스템 - 자연어로 파일을 스마트하게 관리하세요**
 
-An enterprise-grade intelligent file management solution featuring LLM-based organization, semantic search, real-time indexing, web UI monitoring dashboard, and seamless Claude Desktop integration through the Model Context Protocol.
+LLM 기반 파일 정리, 의미 검색, 실시간 인덱싱, 한국어 웹 UI 대시보드, 그리고 Model Context Protocol을 통한 완벽한 Claude Desktop 통합을 제공하는 엔터프라이즈급 지능형 파일 관리 솔루션입니다.
 
 ## 📋 Table of Contents
 - [Key Features](#-key-features)
@@ -32,15 +32,16 @@ An enterprise-grade intelligent file management solution featuring LLM-based org
 - **🏷️ Smart Categorization**: Automatic file classification and tagging
 - **🔄 Real-time Indexing**: Continuous monitoring and indexing of file changes
 
-### 🚀 Advanced Capabilities
-- **⚡ Blazing Fast**: Search 100,000+ files in under 1 second
-- **🎯 High Accuracy**: Content-based search with SQLite FTS5
-- **🐳 Containerized**: Full Docker deployment with one command
-- **🔒 Privacy First**: 100% local processing, no external APIs
-- **📈 Scalable**: Handles millions of files with optimized performance
-- **🌐 Claude Native**: Seamless integration as default file manager
-- **🖥️ Web UI**: Modern React dashboard for monitoring and control
-- **📊 Analytics**: Real-time insights and duplicate detection
+### 🚀 고급 기능
+- **⚡ 초고속 검색**: 100,000개 이상 파일을 1초 내 검색
+- **🎯 높은 정확도**: SQLite FTS5 기반 내용 검색
+- **🐳 컨테이너화**: 한 번의 명령으로 완전한 Docker 배포
+- **🔒 프라이버시 우선**: 100% 로컬 처리, 외부 API 없음
+- **📈 확장성**: 최적화된 성능으로 수백만 파일 처리
+- **🌐 Claude 네이티브**: 기본 파일 관리자로 완벽 통합
+- **🖥️ 웹 UI**: 모니터링 및 제어를 위한 현대적 React 대시보드
+- **📊 분석**: 실시간 인사이트 및 중복 파일 탐지
+- **🇰🇷 한국어 완전 지원**: 기본 한국어 UI, 영어 전환 가능
 
 ### 📊 Performance Highlights
 - **Search Speed**: 0.373s for 100 results from 114,549 files
@@ -128,50 +129,63 @@ docker-compose up -d web-ui
 http://localhost:3002
 ```
 
-### 🖥️ Web UI Dashboard
+### 🖥️ 웹 UI 대시보드
 
-The Smart File Manager includes a modern web interface for monitoring and control:
+Smart File Manager는 모니터링 및 제어를 위한 현대적인 웹 인터페이스를 포함합니다:
 
-#### Features
-- **📊 Real-time Dashboard**: System metrics, file activity, and performance monitoring
-- **🔍 File Explorer**: Advanced search with filters and batch operations
-- **📈 Analytics**: Duplicate detection, storage insights, and usage patterns
-- **🤖 Organization Wizard**: Step-by-step AI-guided file organization
-- **⚙️ Settings**: System configuration and directory management
+#### 주요 기능
+- **📊 실시간 대시보드**: 시스템 메트릭, 파일 활동, 성능 모니터링
+- **🔍 파일 탐색기**: 필터 및 일괄 작업이 가능한 고급 검색
+- **📈 분석**: 중복 파일 탐지, 저장소 인사이트, 사용 패턴
+- **🤖 파일 정리 마법사**: AI 가이드 기반 단계별 파일 정리
+- **⚙️ 설정**: 시스템 구성 및 디렉토리 관리
+- **🌐 언어 지원**: 한국어 기본, 영어 전환 가능
 
-#### Web UI Screenshots
-- Dashboard with real-time metrics and charts
-- File explorer with advanced search capabilities
-- Analytics page showing duplicate files and potential savings
-- Organization wizard with dry-run preview
-- Settings page for system configuration
+#### 웹 UI 특징
+- **한국어 네이티브 지원**: 모든 UI가 한국어로 표시
+- **언어 전환**: 헤더의 국기 아이콘으로 쉬운 언어 변경
+- **반응형 디자인**: 모바일, 태블릿, 데스크톱 모두 지원
+- **Material-UI**: 구글의 Material Design 기반 일관된 디자인
+- **실시간 업데이트**: 자동 새로고침으로 최신 정보 제공
 
 ## 🎯 Usage Examples
 
-### Natural Language Commands in Claude Desktop
+### Claude Desktop에서 자연어 명령
 
-#### 🔍 File Search
+#### 🔍 파일 검색 (한국어)
 ```
-"PDF 파일 찾아줘"                      # Find all PDF files
-"어제 수정된 문서 보여줘"               # Show documents modified yesterday
-"머신러닝 관련 Python 코드 찾아줘"      # Find Python code related to machine learning
-"프레젠테이션 파일 최근 것부터 보여줘"   # Show presentation files, newest first
-```
-
-#### 📁 File Organization
-```
-"다운로드 폴더 정리해줘"                # Organize Downloads folder
-"사진 파일들을 날짜별로 정리해줘"        # Organize photos by date
-"문서들을 프로젝트별로 분류해줘"         # Classify documents by project
-"중복 파일 찾아서 정리 방법 제안해줘"     # Find duplicates and suggest cleanup
+"PDF 파일 찾아줘"                      # PDF 파일 모두 찾기
+"어제 수정된 문서 보여줘"               # 어제 수정된 문서 보기
+"머신러닝 관련 Python 코드 찾아줘"      # 머신러닝 관련 Python 코드 찾기
+"프레젠테이션 파일 최근 것부터 보여줘"   # 프레젠테이션 파일을 최신순으로 표시
+"프로젝트 관련 엑셀 파일 모두 찾아줘"     # 프로젝트 관련 엑셀 파일 찾기
 ```
 
-#### ⚡ Quick Actions
+#### 📁 파일 정리 (한국어)
 ```
-"최근 24시간 내 수정된 파일"            # Files modified in last 24 hours
-"10MB 이상 큰 파일들 찾아줘"           # Find files larger than 10MB
-"코드 파일만 보여줘"                   # Show only code files
-"이미지 파일 카테고리별로 보여줘"        # Show images by category
+"다운로드 폴더 정리해줘"                # 다운로드 폴더 정리
+"사진 파일들을 날짜별로 정리해줘"        # 사진을 날짜별로 정리
+"문서들을 프로젝트별로 분류해줘"         # 문서를 프로젝트별로 분류
+"중복 파일 찾아서 정리 방법 제안해줘"     # 중복 파일 찾고 정리 방법 제안
+"바탕화면 파일들 종류별로 정리해줘"       # 바탕화면 파일 종류별 정리
+```
+
+#### ⚡ 빠른 작업 (한국어)
+```
+"최근 24시간 내 수정된 파일"            # 최근 24시간 내 수정 파일
+"10MB 이상 큰 파일들 찾아줘"           # 10MB 이상 대용량 파일 찾기
+"코드 파일만 보여줘"                   # 코드 파일만 표시
+"이미지 파일 카테고리별로 보여줘"        # 이미지를 카테고리별로 분류
+"중복된 동영상 파일 찾아줘"             # 중복 동영상 파일 탐지
+```
+
+#### 🌐 English Commands (영어 명령)
+```
+"Find all PDF files"                   # Find all PDF files
+"Show documents modified yesterday"     # Show documents modified yesterday
+"Find Python code related to machine learning"  # Find ML Python code
+"Organize my Downloads folder"          # Organize Downloads folder
+"Find duplicate files larger than 5MB"  # Find large duplicate files
 ```
 
 ### Direct API Usage
@@ -883,9 +897,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Version**: 2.2.0  
+**Version**: 2.3.0  
 **Last Updated**: 2025-01-09  
 **Compatibility**: Claude Desktop 1.0+, Docker 20.0+, Node.js 18+
+**Language Support**: 한국어 (기본), English
 
 Made with ❤️ by [hyoseop1231](https://github.com/hyoseop1231)
 

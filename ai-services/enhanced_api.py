@@ -209,7 +209,7 @@ async def health_check():
     health_status = monitor.get_health_status()
     
     return {
-        "status": health_status["status"],
+        "status": health_status.get("status", "unknown"),
         "services": {
             "database": "healthy",
             "indexer": "available",
@@ -220,8 +220,8 @@ async def health_check():
         "db_stats": stats,
         "background_tasks": len(background_tasks_dict),
         "performance": {
-            "system_metrics": health_status["system_metrics"],
-            "issues": health_status["issues"]
+            "system_metrics": health_status.get("system_metrics", {}),
+            "issues": health_status.get("issues", {})
         }
     }
 

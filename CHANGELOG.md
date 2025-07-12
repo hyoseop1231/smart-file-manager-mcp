@@ -5,233 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2025-01-12
+
+### Added
+- 🎯 Adaptive Thinking Algorithm - Automatically selects THINK_HARD, MEGATHINK, or ULTRATHINK modes based on query complexity
+- 🚀 Full Docker integration - All services now run in Docker containers for better isolation and portability
+- 📝 Claude Code CLI support - Added configuration guide for using with Claude Code CLI
+- 🧩 Missing AI services modules:
+  - `embedding_manager.py` - Vector embeddings for semantic search
+  - `db_connection_pool.py` - Thread-safe database connection pooling
+  - `performance_monitor.py` - System performance metrics collection
+  - `adaptive_thinking.py` - Intelligent thinking mode selection
+- 🔧 Health endpoint improvements - Better error handling and system status reporting
+
+### Changed
+- 📦 MCP server configuration updated to use Docker exec instead of direct node execution
+- 🔒 Enhanced error handling in API endpoints
+- 📊 Improved performance monitoring with real-time metrics
+
+### Fixed
+- 🐛 Fixed missing Python modules that were preventing Docker build
+- 🐛 Fixed health endpoint KeyError for missing system_metrics
+- 🐛 Fixed parameter compatibility issue in EmbeddingManager
+- 🐛 Added missing methods in PerformanceMonitor (get_health_status, increment_counter, record_timing)
+
+### Technical Details
+- Added MAFM and Local-File-Organizer integration for enhanced file organization
+- Implemented thread-safe database operations with connection pooling
+- Added comprehensive performance metrics tracking
+- Enhanced LLM integration with 7 Ollama models support
+
 ## [2.3.0] - 2025-01-09
 
 ### Added
-- **🇰🇷 완전한 한국어 지원**: Korean language as default with English toggle
-  - 모든 UI 요소의 한국어 번역 (100+ translation keys)
-  - Language switcher with flag icons in header
-  - Korean date formatting with proper locale support
-  - Language preference saved to localStorage
-  - Seamless language switching without page reload
-- **🖥️ Web UI Dashboard**: Complete React-based monitoring and control interface
-  - Real-time system metrics with interactive charts (CPU, Memory, Disk)
-  - File Explorer with advanced search and batch operations
-  - Analytics page with duplicate detection and storage insights
-  - AI-powered Organization Wizard with dry-run preview
-  - Settings management for system configuration
-- **📊 Enhanced MCP Functions**: Expanded from 4 to 8 comprehensive functions
-  - `analyze_file`: Deep content analysis using AI
-  - `system_status`: Comprehensive health and performance metrics
-  - `find_duplicates`: Advanced duplicate detection with multiple methods
-  - `batch_operation`: Process multiple files in a single operation
-- **🚀 Web UI Features**:
-  - Material-UI based modern design system with Korean support
-  - React Query for efficient data fetching and caching
-  - Recharts for beautiful data visualizations
-  - Real-time updates with automatic refresh
-  - Responsive design for all screen sizes
-  - Toast notifications with Korean/English messages
+- Web UI dashboard with Korean language support
+- Advanced duplicate detection
+- Batch operations for multiple files
+- Performance analytics dashboard
 
-### Enhanced
-- **파일 정리 기능 완전 작동**: Fully functional file organization
-  - AI-powered categorization with preview mode
-  - Background task monitoring with progress tracking
-  - Multiple organization methods (content, date, file type)
-  - Dry-run capability to preview changes before applying
-  - Real-time progress updates and error handling
-- **모든 버튼 기능화**: All buttons now functional
-  - Dashboard cards clickable to navigate to relevant pages
-  - File Explorer search with Enter key support and clear button
-  - File analysis action with API integration
-  - Proper error handling with translated messages
-
-### Changed
-- Default language set to Korean (한국어) with English fallback
-- Default web UI port changed from 3000 to 3002 to avoid common conflicts
-- Improved MCP server endpoint mappings for all functions
-- Enhanced error handling with multilingual error messages
-- Optimized API response formats for consistency
-
-### Fixed
-- Fixed Korean translations not applying to all pages
-- Added useTranslation hooks to all components (Analytics, FileExplorer, Organization, Settings)
-- Fixed 404 errors on all MCP function calls
-- Corrected `smart_workflow` endpoint mapping from `/workflow` to `/organize`
-- Fixed `quick_search` to use proper query parameters instead of path parameters
-- Resolved TypeScript compilation errors in web UI
-- Fixed Recharts TreeMap vs Treemap import issue
-- Improved port availability checking in startup scripts
-
-### Technical Details
-- Added i18next, react-i18next, and i18next-browser-languagedetector
-- Enhanced Korean translation files with technical terminology
-- Proper axios configuration with base URL setup
-- Request/response interceptors for error handling
-
-## [2.1.1] - 2025-07-09
-
-### Fixed
-- **🖼️ Vision Analysis**: Fixed image analysis in Docker container
-  - EnhancedLLMOrganizer now reads Ollama URL from environment variable
-  - Resolves connection errors when using llava:13b model for image analysis
-  - Vision features now work correctly for all supported image formats (.jpg, .jpeg, .png, .svg)
-
-## [2.1.0] - 2025-07-09
+## [2.2.0] - 2024-12-15
 
 ### Added
-- **📚 Comprehensive Documentation**: Complete overhaul of all documentation
-  - Professional README with badges, TOC, and detailed examples
-  - API Reference with all endpoints documented
-  - Troubleshooting Guide for common issues
-  - Contributing Guidelines for developers
-  - One-line installation script
+- Semantic search with vector embeddings
+- Real-time file indexing
+- Background task management
 
-### Fixed
-- **🔧 Periodic Indexing**: Fixed scheduler methods for proper background indexing
-  - Added missing `index_file` method to FileIndexer
-  - Fixed `get_recent_files` method reference
-  - Cleanup function now uses proper database optimization
-
-## [2.0.0] - 2025-07-09
-
-### 🎉 Major Release - Complete Rewrite with Enhanced Features
-
-This release represents a complete overhaul of the Smart File Manager MCP, with significant improvements in performance, reliability, and functionality.
+## [2.1.0] - 2024-11-20
 
 ### Added
-- **🧠 LLM-Enhanced Search**: Integrated Ollama for natural language understanding in file searches
-- **📊 Vector Embeddings**: Semantic search capabilities using nomic-embed-text model
-- **🔄 Periodic Indexing**: Automated background indexing with configurable intervals
-  - Full indexing every 2 hours
-  - Quick indexing every 30 minutes
-  - Database cleanup every 24 hours
-- **🔗 Database Connection Pooling**: Thread-safe SQLite access with retry logic
-- **📈 Performance Monitoring**: Real-time metrics for CPU, memory, and disk usage
-- **🛡️ Enhanced Error Handling**: Comprehensive error recovery and logging
-- **🎯 MCP Protocol Compliance**: Full compatibility with Claude Desktop v1.0
-- **🐳 Optimized Docker Build**: Multi-stage build reducing startup time to < 5 seconds
-- **📝 Comprehensive Documentation**: Complete API reference and usage examples
+- LLM-enhanced search capabilities
+- Smart file categorization
+- MCP protocol support
 
-### Changed
-- **Database Architecture**: Migrated to SQLite with FTS5 for 10x faster searches
-- **API Structure**: Refactored to FastAPI with Pydantic V2 models
-- **Error Handling**: Implemented raw request handling to fix MCP 422 errors
-- **File Indexing**: Added content hash-based duplicate detection
-- **Search Algorithm**: Hybrid approach combining FTS5 and LLM understanding
-- **Docker Configuration**: Simplified setup with automatic Ollama integration
-
-### Fixed
-- **🐛 Database Locking**: Resolved concurrent access issues with WAL mode
-- **🐛 MCP 422 Errors**: Fixed field validation issues for Claude Desktop
-- **🐛 Embedding Timeouts**: Reduced batch sizes for stable processing
-- **🐛 Background Tasks**: Fixed FastAPI BackgroundTasks handling
-- **🐛 Scheduler Issues**: Added missing methods for periodic indexing
-- **🐛 Memory Leaks**: Proper connection cleanup and resource management
-
-### Performance Improvements
-- **Search Speed**: 0.373s for 100 results from 114,549 files
-- **Indexing Rate**: 10,000+ files per minute
-- **Memory Usage**: Reduced from 2GB to < 512MB typical usage
-- **CPU Usage**: < 1% idle, < 10% during active indexing
-- **Startup Time**: Reduced from 30s to < 5s
-
-### Security
-- **🔒 Local Processing**: All operations performed locally without external APIs
-- **🔒 Read-Only Mounts**: File system protection in Docker containers
-- **🔒 Network Isolation**: Services run in isolated Docker network
-
-## [1.5.0] - 2025-07-01
+## [2.0.0] - 2024-10-01
 
 ### Added
-- Basic MCP server implementation
-- Simple file search functionality
+- Complete rewrite with FastAPI
 - Docker support
-- Initial Claude Desktop integration
+- Claude Desktop integration
 
-### Changed
-- Updated to TypeScript for MCP server
-- Improved error handling
-
-### Fixed
-- Various bug fixes and stability improvements
-
-## [1.0.0] - 2025-01-15
+## [1.0.0] - 2024-08-15
 
 ### Added
 - Initial release
-- Basic file management features
-- Simple search functionality
-
----
-
-## Upgrade Guide
-
-### From 1.x to 2.0
-
-1. **Backup your data**:
-   ```bash
-   docker-compose down
-   docker volume create smart_file_backup
-   docker run --rm -v smart_file_data:/from -v smart_file_backup:/to alpine cp -av /from/. /to
-   ```
-
-2. **Update the repository**:
-   ```bash
-   git pull origin main
-   ```
-
-3. **Rebuild containers**:
-   ```bash
-   docker-compose build --no-cache
-   ```
-
-4. **Update Claude Desktop config**:
-   - Add `priority: 1` to your MCP server configuration
-   - Add `autoApprove` array for seamless operation
-
-5. **Start services**:
-   ```bash
-   docker-compose up -d
-   ```
-
-### Breaking Changes in 2.0
-
-- API endpoints have been restructured
-- Database schema has been completely redesigned
-- Configuration file format has changed
-- Minimum Docker version is now 20.0+
-
-## Future Roadmap
-
-### Version 2.3 (Planned)
-- [ ] Real-time file monitoring with WebSocket
-- [ ] Multi-language support (10+ languages)
-- [ ] Cloud storage integration (Google Drive, Dropbox)
-- [ ] File content preview in Web UI
-- [ ] Advanced search syntax support
-
-### Version 2.4 (Planned)
-- [ ] Collaborative features
-- [ ] Mobile app support
-- [ ] Plugin system for extensibility
-- [ ] Voice command integration
-- [ ] AI model fine-tuning interface
-
-### Version 3.0 (Planned)
-- [ ] Distributed indexing for massive file collections
-- [ ] Machine learning-based file predictions
-- [ ] Advanced workflow automation
-- [ ] Enterprise features
-
-## Support
-
-For issues and feature requests, please visit:
-- [GitHub Issues](https://github.com/hyoseop1231/smart-file-manager-mcp/issues)
-- [Discussions](https://github.com/hyoseop1231/smart-file-manager-mcp/discussions)
-
----
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
+- Basic file search functionality
+- SQLite FTS5 integration

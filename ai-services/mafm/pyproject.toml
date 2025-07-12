@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "mafm"
+version = "0.1.0"
+description = ""
+authors = ["sehwan505 <sehwan505@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10, <3.13"
+openai = "^1.47.0"
+sentence-transformers = "^3.1.1"
+pymilvus = "2.4.9"
+langgraph = "^0.2.23"
+langchain-openai = "^0.2.0"
+langchain = "^0.3.0"
+langchain-experimental = "^0.3.1"
+ipython = "^8.28.0"
+psutil = "^6.0.0"
+watchdog = "^6.0.0"
+pytest-order = "^1.3.0"
+pytest-mock = "^3.14.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

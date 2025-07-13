@@ -6,6 +6,7 @@ High-performance vector search using Qdrant
 import os
 import logging
 import hashlib
+import uuid
 import numpy as np
 from typing import List, Dict, Tuple, Optional, Any
 from datetime import datetime
@@ -82,8 +83,10 @@ class QdrantVectorManager:
             logger.error(f"Failed to initialize collection: {e}")
     
     def generate_file_id(self, file_path: str) -> str:
-        """Generate unique ID for file"""
-        return hashlib.sha256(file_path.encode()).hexdigest()[:16]
+        """Generate unique UUID for file using UUID v5 (deterministic)"""
+        # Use a fixed namespace for file paths
+        namespace = uuid.UUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8')  # URL namespace
+        return str(uuid.uuid5(namespace, file_path))
     
     async def store_embedding(
         self, 
@@ -286,18 +289,27 @@ class QdrantVectorManager:
                 lambda: self.client.get_collection(self.collection_name)
             )
             
-            return {
+            stats = {
                 "status": "connected",
                 "collection": self.collection_name,
                 "vectors_count": info.points_count,
                 "vectors_config": {
                     "size": info.config.params.vectors.size,
                     "distance": info.config.params.vectors.distance
-                },
-                "disk_size_mb": info.disk_data_size / (1024 * 1024) if info.disk_data_size else 0,
-                "memory_size_mb": info.memory_size / (1024 * 1024) if info.memory_size else 0,
-                "indexed": info.indexed_vectors_count
+                }
             }
+            
+            # Add optional fields if available
+            if hasattr(info, 'disk_data_size'):
+                stats["disk_size_mb"] = info.disk_data_size / (1024 * 1024)
+            if hasattr(info, 'memory_size'):
+                stats["memory_size_mb"] = info.memory_size / (1024 * 1024)
+            if hasattr(info, 'indexed_vectors_count'):
+                stats["indexed"] = info.indexed_vectors_count
+            elif hasattr(info, 'indexed_count'):
+                stats["indexed"] = info.indexed_count
+                
+            return stats
             
         except Exception as e:
             logger.error(f"Error getting collection stats: {e}")

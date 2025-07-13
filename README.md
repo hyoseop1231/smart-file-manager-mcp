@@ -31,6 +31,8 @@ LLM 기반 파일 정리, 의미 검색, 실시간 인덱싱, 한국어 웹 UI �
 - **📊 Semantic Search**: Vector embeddings for finding conceptually similar files
 - **🏷️ Smart Categorization**: Automatic file classification and tagging
 - **🔄 Real-time Indexing**: Continuous monitoring and indexing of file changes
+- **🎯 Adaptive Thinking**: Automatic THINK_HARD, MEGATHINK, ULTRATHINK mode selection
+- **🚀 Multi-Model Support**: 7 Ollama models for different tasks
 
 ### 🚀 고급 기능
 - **⚡ 초고속 검색**: 100,000개 이상 파일을 1초 내 검색
@@ -89,23 +91,39 @@ Add to your Claude Desktop configuration:
 {
   "mcpServers": {
     "smart-file-manager": {
-      "command": "node",
-      "args": [
-        "/path/to/smart-file-manager-mcp/mcp-server/dist/index.js"
-      ],
+      "command": "docker",
+      "args": ["exec", "-i", "smart-file-mcp-server", "node", "/app/dist/index.js"],
       "env": {
         "AI_SERVICE_URL": "http://localhost:8001",
         "DEFAULT_FILE_MANAGER": "true"
       },
       "priority": 1,
       "autoApprove": ["search_files", "quick_search", "organize_files"],
-      "description": "Primary file management system with AI capabilities"
+      "description": "Primary file management system with AI capabilities (Docker)"
     }
   }
 }
 ```
 
-#### 3. Verify Installation
+#### 3. Configure Claude Code CLI (Optional)
+For Claude Code CLI integration, create `.mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "smart-file-manager": {
+      "command": "docker",
+      "args": ["exec", "-i", "smart-file-mcp-server", "node", "/app/dist/index.js"],
+      "env": {
+        "AI_SERVICE_URL": "http://localhost:8001",
+        "DEFAULT_FILE_MANAGER": "true"
+      }
+    }
+  }
+}
+```
+
+#### 4. Verify Installation
 ```bash
 # Check services are running
 docker-compose ps
@@ -117,7 +135,7 @@ curl http://localhost:8001/health
 "파일 검색 테스트" or "test file search"
 ```
 
-#### 4. Access Web UI (Optional)
+#### 5. Access Web UI (Optional)
 ```bash
 # For development mode with hot reload
 ./start-webui.sh
@@ -897,8 +915,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Version**: 2.3.0  
-**Last Updated**: 2025-01-09  
+**Version**: 2.4.0  
+**Last Updated**: 2025-01-12  
 **Compatibility**: Claude Desktop 1.0+, Docker 20.0+, Node.js 18+
 **Language Support**: 한국어 (기본), English
 

@@ -12,11 +12,8 @@ RUN npm ci
 # Copy source code
 COPY src ./src
 
-# Build TypeScript (if dist doesn't exist)
+# Build TypeScript
 RUN npm run build
-
-# Copy pre-built dist if available
-COPY dist ./dist
 
 # Set environment variables
 ENV NODE_ENV=production

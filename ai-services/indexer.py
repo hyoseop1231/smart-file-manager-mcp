@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Background indexer service for periodic file indexing
+Background indexer service for periodic file indexing with HWP/HWPX support
 """
 import os
 import time
@@ -14,6 +14,9 @@ from typing import List, Dict, Any
 import schedule
 import numpy as np
 
+# Import content extraction system
+from content_extractor import ContentExtractor
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,6 +26,10 @@ class FileIndexer:
         self.db_path = db_path
         self.embeddings_path = embeddings_path
         self.metadata_path = metadata_path
+        
+        # Initialize content extractor for text processing
+        self.content_extractor = ContentExtractor()
+        
         # Get directories from environment or use defaults
         self.indexed_dirs = [
             os.environ.get("HOME_DOCUMENTS", "/watch_directories/Documents"),
@@ -46,7 +53,7 @@ class FileIndexer:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        # Files table with full-text search
+        # Files table with full-text search and content storage
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS files (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,6 +63,9 @@ class FileIndexer:
                 size INTEGER,
                 modified_time REAL,
                 content_hash TEXT,
+                text_content TEXT,
+                content_extracted BOOLEAN DEFAULT 0,
+                extraction_metadata TEXT,
                 embedding_id TEXT,
                 metadata_json TEXT,
                 indexed_at REAL,
@@ -63,10 +73,10 @@ class FileIndexer:
             )
         ''')
         
-        # Create FTS5 virtual table for full-text search
+        # Create FTS5 virtual table for full-text search with content support
         cursor.execute('''
             CREATE VIRTUAL TABLE IF NOT EXISTS files_fts USING fts5(
-                name, path,
+                name, path, text_content,
                 content='files',
                 content_rowid='id'
             )
@@ -75,7 +85,8 @@ class FileIndexer:
         # Create triggers to keep FTS in sync
         cursor.execute('''
             CREATE TRIGGER IF NOT EXISTS files_ai AFTER INSERT ON files BEGIN
-                INSERT INTO files_fts(rowid, name, path) VALUES (new.id, new.name, new.path);
+                INSERT INTO files_fts(rowid, name, path, text_content) 
+                VALUES (new.id, new.name, new.path, new.text_content);
             END
         ''')
         
@@ -87,7 +98,8 @@ class FileIndexer:
         
         cursor.execute('''
             CREATE TRIGGER IF NOT EXISTS files_au AFTER UPDATE ON files BEGIN
-                UPDATE files_fts SET name = new.name, path = new.path WHERE rowid = new.id;
+                UPDATE files_fts SET name = new.name, path = new.path, text_content = new.text_content 
+                WHERE rowid = new.id;
             END
         ''')
         
@@ -145,7 +157,7 @@ class FileIndexer:
             "is_hidden": file_path.name.startswith('.')
         }
         
-        # Add file type categorization
+        # Add file type categorization with HWP/HWPX support
         extension = metadata["extension"]
         if extension in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg']:
             metadata["category"] = "image"
@@ -155,12 +167,17 @@ class FileIndexer:
             metadata["category"] = "audio"
         elif extension in ['.pdf', '.doc', '.docx', '.txt', '.md']:
             metadata["category"] = "document"
-        elif extension in ['.py', '.js', '.java', '.cpp', '.c', '.go']:
+        elif extension in ['.hwp', '.hwpx']:
+            metadata["category"] = "korean_document"
+        elif extension in ['.py', '.js', '.java', '.cpp', '.c', '.go', '.php', '.rb', '.sh', '.sql', '.html', '.css', '.yml', '.yaml', '.json', '.xml']:
             metadata["category"] = "code"
         elif extension in ['.zip', '.tar', '.gz', '.rar', '.7z']:
             metadata["category"] = "archive"
         else:
             metadata["category"] = "other"
+            
+        # Add content extraction capability flag
+        metadata["can_extract_text"] = self.content_extractor.can_extract(str(file_path))
             
         return metadata
         
@@ -227,13 +244,34 @@ class FileIndexer:
                         if existing and existing[0] == content_hash:
                             # File unchanged, skip
                             continue
+                        
+                        # Extract text content if supported
+                        text_content = ""
+                        content_extracted = False
+                        extraction_metadata = {}
+                        
+                        if metadata.get("can_extract_text", False):
+                            try:
+                                text, success, extract_meta = self.content_extractor.extract_content(str(file_path))
+                                if success and text:
+                                    text_content = text
+                                    content_extracted = True
+                                    extraction_metadata = extract_meta
+                                    logger.debug(f"Text extracted from {file_path.name}: {len(text)} characters")
+                                else:
+                                    logger.debug(f"Text extraction failed for {file_path.name}: {extract_meta.get('error', 'Unknown error')}")
+                                    extraction_metadata = extract_meta
+                            except Exception as e:
+                                logger.warning(f"Text extraction error for {file_path}: {e}")
+                                extraction_metadata = {"error": str(e)}
                             
                         # Insert or update file record
                         cursor.execute('''
                             INSERT OR REPLACE INTO files 
                             (path, name, extension, size, modified_time, 
-                             content_hash, metadata_json, indexed_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                             content_hash, text_content, content_extracted, extraction_metadata,
+                             metadata_json, indexed_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ''', (
                             str(file_path),
                             metadata["name"],
@@ -241,6 +279,9 @@ class FileIndexer:
                             metadata["size"],
                             metadata["modified"],
                             content_hash,
+                            text_content,
+                            content_extracted,
+                            json.dumps(extraction_metadata),
                             json.dumps(metadata),
                             time.time()
                         ))
@@ -293,13 +334,34 @@ class FileIndexer:
                 # File unchanged, skip
                 logger.debug(f"File unchanged, skipping: {file_path}")
                 return
+            
+            # Extract text content if supported
+            text_content = ""
+            content_extracted = False
+            extraction_metadata = {}
+            
+            if metadata.get("can_extract_text", False):
+                try:
+                    text, success, extract_meta = self.content_extractor.extract_content(str(file_path))
+                    if success and text:
+                        text_content = text
+                        content_extracted = True
+                        extraction_metadata = extract_meta
+                        logger.debug(f"Text extracted from {file_path.name}: {len(text)} characters")
+                    else:
+                        logger.debug(f"Text extraction failed for {file_path.name}: {extract_meta.get('error', 'Unknown error')}")
+                        extraction_metadata = extract_meta
+                except Exception as e:
+                    logger.warning(f"Text extraction error for {file_path}: {e}")
+                    extraction_metadata = {"error": str(e)}
                 
             # Insert or update file record
             cursor.execute('''
                 INSERT OR REPLACE INTO files 
                 (path, name, extension, size, modified_time, 
-                 content_hash, metadata_json, indexed_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 content_hash, text_content, content_extracted, extraction_metadata,
+                 metadata_json, indexed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 str(file_path),
                 metadata["name"],
@@ -307,6 +369,9 @@ class FileIndexer:
                 metadata["size"],
                 metadata["modified"],
                 content_hash,
+                text_content,
+                content_extracted,
+                json.dumps(extraction_metadata),
                 json.dumps(metadata),
                 time.time()
             ))
@@ -352,7 +417,7 @@ class FileIndexer:
         logger.info(f"Indexing completed in {elapsed:.2f} seconds")
         
     def get_stats(self) -> Dict[str, Any]:
-        """Get indexing statistics"""
+        """Get indexing statistics including content extraction stats"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
@@ -372,6 +437,44 @@ class FileIndexer:
         """)
         stats["by_category"] = dict(cursor.fetchall())
         
+        # Content extraction statistics
+        cursor.execute("SELECT COUNT(*) FROM files WHERE content_extracted = 1")
+        stats["files_with_content"] = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM files WHERE text_content IS NOT NULL AND text_content != ''")
+        stats["files_with_text"] = cursor.fetchone()[0]
+        
+        # HWP/HWPX specific stats
+        cursor.execute("""
+            SELECT COUNT(*) FROM files 
+            WHERE json_extract(metadata_json, '$.category') = 'korean_document'
+        """)
+        stats["korean_documents"] = cursor.fetchone()[0]
+        
+        cursor.execute("""
+            SELECT COUNT(*) FROM files 
+            WHERE json_extract(metadata_json, '$.category') = 'korean_document'
+            AND content_extracted = 1
+        """)
+        stats["korean_documents_extracted"] = cursor.fetchone()[0]
+        
+        # Text content statistics
+        cursor.execute("""
+            SELECT 
+                AVG(LENGTH(text_content)) as avg_length,
+                MAX(LENGTH(text_content)) as max_length,
+                MIN(LENGTH(text_content)) as min_length
+            FROM files 
+            WHERE text_content IS NOT NULL AND text_content != ''
+        """)
+        text_stats = cursor.fetchone()
+        if text_stats and text_stats[0]:
+            stats["text_content_stats"] = {
+                "avg_length": int(text_stats[0]),
+                "max_length": text_stats[1],
+                "min_length": text_stats[2]
+            }
+        
         # Total size
         cursor.execute("SELECT SUM(size) FROM files")
         total_size = cursor.fetchone()[0] or 0
@@ -383,6 +486,9 @@ class FileIndexer:
             WHERE indexed_at > ?
         """, (time.time() - 86400,))  # Last 24 hours
         stats["indexed_last_24h"] = cursor.fetchone()[0]
+        
+        # Content extraction capabilities
+        stats["content_extractor_info"] = self.content_extractor.get_statistics()
         
         conn.close()
         return stats

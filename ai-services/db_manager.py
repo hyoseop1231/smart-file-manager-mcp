@@ -83,14 +83,17 @@ class DatabaseManager:
                 sql_parts = []
                 params = []
                 
-                # Use FTS5 for text search
+                # Use FTS5 for text search (including file content)
                 if query:
                     # Escape special characters for FTS5
                     escaped_query = self._escape_fts_query(query)
                     sql_parts.append("""
                         SELECT f.*, 
                                highlight(files_fts, 0, '<mark>', '</mark>') as highlighted_name,
-                               snippet(files_fts, 0, '<mark>', '</mark>', '...', 20) as snippet
+                               highlight(files_fts, 1, '<mark>', '</mark>') as highlighted_path,
+                               highlight(files_fts, 2, '<mark>', '</mark>') as highlighted_content,
+                               snippet(files_fts, 2, '<mark>', '</mark>', '...', 30) as content_snippet,
+                               bm25(files_fts) as relevance_score
                         FROM files f
                         JOIN files_fts ON f.id = files_fts.rowid
                         WHERE files_fts MATCH ?
@@ -106,7 +109,12 @@ class DatabaseManager:
                     params.extend(directories)
                 
                 # Add ordering and limit
-                sql_parts.append("ORDER BY f.modified_time DESC")
+                if query:
+                    # Order by relevance score when searching
+                    sql_parts.append("ORDER BY relevance_score DESC, f.modified_time DESC")
+                else:
+                    # Order by modification time when browsing
+                    sql_parts.append("ORDER BY f.modified_time DESC")
                 sql_parts.append(f"LIMIT {limit}")
                 
                 # Execute search
@@ -119,16 +127,45 @@ class DatabaseManager:
                         'path': row['path'],
                         'name': row['name'],
                         'size': row['size'],
-                        'modified': row['modified_time'],
+                        'modified_time': row['modified_time'],
+                        'modified': row['modified_time'],  # Keep for compatibility
                         'metadata': json.loads(row['metadata_json']) if row['metadata_json'] else {},
-                        'score': 1.0  # Can be improved with relevance scoring
+                        'content_extracted': bool(row.get('content_extracted', False)),
+                        'has_text_content': bool(row.get('text_content')),
+                        'score': 1.0  # Default score
                     }
                     
+                    # Add relevance score if available (from FTS search)
+                    if 'relevance_score' in row.keys() and row['relevance_score'] is not None:
+                        result['score'] = abs(float(row['relevance_score']))  # BM25 can be negative
+                    
                     # Add highlights if available
-                    if 'highlighted_name' in row.keys():
+                    if 'highlighted_name' in row.keys() and row['highlighted_name']:
                         result['highlighted_name'] = row['highlighted_name']
-                    if 'snippet' in row.keys():
+                    else:
+                        result['highlighted_name'] = row['name']
+                        
+                    if 'highlighted_path' in row.keys() and row['highlighted_path']:
+                        result['highlighted_path'] = row['highlighted_path']
+                    else:
+                        result['highlighted_path'] = row['path']
+                        
+                    if 'highlighted_content' in row.keys() and row['highlighted_content']:
+                        result['highlighted_content'] = row['highlighted_content']
+                    
+                    # Add content snippet for search results
+                    if 'content_snippet' in row.keys() and row['content_snippet']:
+                        result['snippet'] = row['content_snippet']
+                    elif 'snippet' in row.keys() and row['snippet']:
                         result['snippet'] = row['snippet']
+                    
+                    # Add extraction metadata if available
+                    if row.get('extraction_metadata'):
+                        try:
+                            extraction_meta = json.loads(row['extraction_metadata'])
+                            result['extraction_info'] = extraction_meta
+                        except:
+                            pass
                         
                     results.append(result)
                 
@@ -369,6 +406,66 @@ class DatabaseManager:
                     'days_old': int((time.time() - row['modified_time']) / (24 * 3600)),
                     'metadata': json.loads(row['metadata_json']) if row['metadata_json'] else {}
                 })
+            
+            return results
+    
+    def search_korean_documents(self, query: str = "", limit: int = 50) -> List[Dict[str, Any]]:
+        """Search specifically Korean documents (HWP/HWPX files) with content support"""
+        with get_db_connection(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            if query:
+                # Text-based search in Korean documents
+                escaped_query = self._escape_fts_query(query)
+                cursor.execute("""
+                    SELECT f.*, 
+                           highlight(files_fts, 0, '<mark>', '</mark>') as highlighted_name,
+                           highlight(files_fts, 2, '<mark>', '</mark>') as highlighted_content,
+                           snippet(files_fts, 2, '<mark>', '</mark>', '...', 50) as content_snippet,
+                           bm25(files_fts) as relevance_score
+                    FROM files f
+                    JOIN files_fts ON f.id = files_fts.rowid
+                    WHERE files_fts MATCH ? 
+                    AND json_extract(f.metadata_json, '$.category') = 'korean_document'
+                    ORDER BY relevance_score DESC, f.modified_time DESC
+                    LIMIT ?
+                """, (escaped_query, limit))
+            else:
+                # Browse all Korean documents
+                cursor.execute("""
+                    SELECT * FROM files 
+                    WHERE json_extract(metadata_json, '$.category') = 'korean_document'
+                    ORDER BY modified_time DESC 
+                    LIMIT ?
+                """, (limit,))
+            
+            results = []
+            for row in cursor.fetchall():
+                result = {
+                    'path': row['path'],
+                    'name': row['name'],
+                    'size': row['size'],
+                    'modified_time': row['modified_time'],
+                    'modified': row['modified_time'],
+                    'metadata': json.loads(row['metadata_json']) if row['metadata_json'] else {},
+                    'content_extracted': bool(row.get('content_extracted', False)),
+                    'has_text_content': bool(row.get('text_content')),
+                    'category': 'korean_document',
+                    'score': 1.0
+                }
+                
+                # Add search-specific fields if available
+                if query:
+                    if 'relevance_score' in row.keys() and row['relevance_score'] is not None:
+                        result['score'] = abs(float(row['relevance_score']))
+                    if 'highlighted_name' in row.keys() and row['highlighted_name']:
+                        result['highlighted_name'] = row['highlighted_name']
+                    if 'highlighted_content' in row.keys() and row['highlighted_content']:
+                        result['highlighted_content'] = row['highlighted_content']
+                    if 'content_snippet' in row.keys() and row['content_snippet']:
+                        result['snippet'] = row['content_snippet']
+                
+                results.append(result)
             
             return results
             

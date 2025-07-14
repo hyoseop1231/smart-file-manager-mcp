@@ -715,6 +715,86 @@ async def get_parallel_stats():
         "stats": enhanced_processor.stats
     }
 
+@app.post("/search/korean")
+async def search_korean_documents(request: Request):
+    """Search Korean documents (HWP/HWPX) with content support"""
+    try:
+        body = await request.json()
+        query = body.get("query", "")
+        limit = body.get("limit", 50)
+        
+        logger.info(f"Korean document search: query='{query}', limit={limit}")
+        
+        # Use the new Korean document search method
+        results = db_manager.search_korean_documents(query, limit)
+        
+        return {
+            "success": True,
+            "count": len(results),
+            "results": results,
+            "method": "korean_document_search",
+            "query": query,
+            "search_time_ms": 0  # Can add timing if needed
+        }
+        
+    except Exception as e:
+        logger.error(f"Korean document search error: {e}")
+        return {
+            "success": False,
+            "count": 0,
+            "results": [],
+            "method": "error",
+            "error": str(e)
+        }
+
+@app.get("/content/extract/{file_id}")
+async def extract_file_content(file_id: int):
+    """Extract content from a specific file by ID"""
+    try:
+        # Get file info from database
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM files WHERE id = ?", (file_id,))
+        row = cursor.fetchone()
+        
+        if not row:
+            return {"error": "File not found"}
+        
+        file_path = row['path']
+        
+        # Use content extractor
+        text, success, metadata = file_indexer.content_extractor.extract_content(file_path)
+        
+        return {
+            "success": success,
+            "file_path": file_path,
+            "file_name": row['name'],
+            "content_length": len(text) if text else 0,
+            "content": text[:1000] + "..." if len(text) > 1000 else text,  # Preview
+            "extraction_metadata": metadata
+        }
+        
+    except Exception as e:
+        logger.error(f"Content extraction error: {e}")
+        return {"error": str(e)}
+
+@app.get("/stats/content")
+async def get_content_stats():
+    """Get content extraction statistics"""
+    try:
+        stats = file_indexer.get_stats()
+        content_stats = file_indexer.content_extractor.get_statistics()
+        
+        return {
+            "indexer_stats": stats,
+            "content_extractor_stats": content_stats
+        }
+        
+    except Exception as e:
+        logger.error(f"Stats error: {e}")
+        return {"error": str(e)}
+
 
 if __name__ == "__main__":
     import uvicorn

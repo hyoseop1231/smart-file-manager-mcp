@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-# Install system dependencies including build tools for psutil
+# Install system dependencies including build tools for psutil and LibreOffice for HWP support
 RUN apt-get update && apt-get install -y \
     curl \
     libmagic1 \
@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     python3-dev \
     gcc \
+    libreoffice \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -35,6 +36,8 @@ COPY vector_api_endpoints.py .
 COPY db_connection_pool.py .
 COPY performance_monitor.py .
 COPY enhanced_file_processor.py .
+COPY content_extractor.py .
+COPY hwp_processor.py .
 
 # Copy additional directories
 COPY mafm/ ./mafm/

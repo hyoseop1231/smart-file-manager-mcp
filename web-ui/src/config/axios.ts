@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Set the default base URL for axios
 // This will use the environment variable if available, otherwise default to localhost
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 axios.defaults.baseURL = API_BASE_URL;
 axios.defaults.headers.common['Content-Type'] = 'application/json';

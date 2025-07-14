@@ -29,8 +29,12 @@ COPY organizer_bridge.py .
 COPY ollama_bridge.py .
 COPY multi_agent_manager.py .
 COPY embedding_manager.py .
+COPY enhanced_embedding_manager.py .
+COPY qdrant_vector_manager.py .
+COPY vector_api_endpoints.py .
 COPY db_connection_pool.py .
 COPY performance_monitor.py .
+COPY enhanced_file_processor.py .
 
 # Copy additional directories
 COPY mafm/ ./mafm/

@@ -10,9 +10,8 @@ import {
   ListItemIcon,
   ListItemText,
   IconButton,
-  useTheme,
+  useTheme as useMuiTheme,
   useMediaQuery,
-  Badge,
   Avatar,
 } from '@mui/material';
 import {
@@ -23,8 +22,8 @@ import {
   AutoAwesome as OrganizeIcon,
   Settings as SettingsIcon,
   Search as SearchIcon,
-  Notifications as NotificationsIcon,
   Brightness4 as DarkModeIcon,
+  Brightness7 as LightModeIcon,
   Storage as StorageIcon,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -32,6 +31,8 @@ import { useQuery } from 'react-query';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import LanguageSwitcher from '../LanguageSwitcher/LanguageSwitcher';
+import NotificationDropdown from '../NotificationDropdown/NotificationDropdown';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -40,11 +41,12 @@ interface LayoutProps {
 const drawerWidth = 280;
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const theme = useTheme();
+  const muiTheme = useMuiTheme();
+  const { mode, toggleColorMode } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navigationItems = [
@@ -220,16 +222,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <SearchIcon />
             </IconButton>
             
-            <IconButton color="inherit">
-              <Badge badgeContent={systemStatus?.background_tasks || 0} color="error">
-                <NotificationsIcon />
-              </Badge>
-            </IconButton>
+            <NotificationDropdown />
 
             <LanguageSwitcher />
 
-            <IconButton color="inherit">
-              <DarkModeIcon />
+            <IconButton color="inherit" onClick={toggleColorMode}>
+              {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
             </IconButton>
 
             <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>

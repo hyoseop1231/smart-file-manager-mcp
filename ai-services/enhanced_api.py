@@ -25,7 +25,15 @@ from enhanced_llm_organizer import EnhancedLLMOrganizer
 from indexer import FileIndexer
 from db_manager import DatabaseManager
 from embedding_manager import EmbeddingManager
+from enhanced_embedding_manager import EnhancedEmbeddingManager
 from performance_monitor import get_performance_monitor
+from vector_api_endpoints import router as vector_router, set_embedding_manager
+from enhanced_file_processor import EnhancedFileProcessor
+import psutil
+
+# Configure logging first
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Smart File Manager AI Service - Enhanced & Fixed")
 
@@ -81,14 +89,40 @@ metadata_path = os.environ.get("METADATA_PATH", "/tmp/smart-file-manager/metadat
 
 db_manager = DatabaseManager(db_path)
 file_indexer = FileIndexer(db_path, embeddings_path, metadata_path)
-embedding_manager = EmbeddingManager(embeddings_path=embeddings_path)
+
+# Initialize enhanced file processor with parallel processing
+worker_processes = int(os.environ.get("WORKER_PROCESSES", 5))
+batch_size = int(os.environ.get("BATCH_SIZE", 10))
+max_file_size_mb = int(os.environ.get("MAX_FILE_SIZE_MB", 100))
+
+enhanced_processor = EnhancedFileProcessor(
+    db_path=db_path,
+    embeddings_path=embeddings_path,
+    metadata_path=metadata_path,
+    worker_processes=worker_processes,
+    batch_size=batch_size,
+    max_file_size_mb=max_file_size_mb
+)
+logger.info(f"Enhanced processor initialized with {worker_processes} workers, batch size {batch_size}")
+
+# Use enhanced embedding manager with Qdrant support
+# Use enhanced embedding manager with Qdrant support
+try:
+    embedding_manager = EnhancedEmbeddingManager(embeddings_path=embeddings_path)
+    logger.info("Using EnhancedEmbeddingManager with Qdrant support")
+except Exception as e:
+    logger.warning(f"Failed to initialize EnhancedEmbeddingManager: {e}")
+    embedding_manager = EmbeddingManager(embeddings_path=embeddings_path)
+    logger.info("Falling back to basic EmbeddingManager")
+
+# Set embedding manager for vector API
+set_embedding_manager(embedding_manager)
+
+# Include vector API router
+app.include_router(vector_router)
 
 # Global state for background tasks
 background_tasks_dict = {}
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Request models - Fixed version with proper Pydantic V2 syntax and MCP compatibility
 class SearchRequest(BaseModel):
@@ -215,12 +249,18 @@ async def health_check():
             "indexer": "available",
             "llm_organizer": "available",
             "ollama": ollama_status,
-            "vectordb": "planned"
+            "vectordb": "available" if hasattr(embedding_manager, 'use_qdrant') and embedding_manager.use_qdrant else "sqlite_only"
         },
         "db_stats": stats,
         "background_tasks": len(background_tasks_dict),
         "performance": {
-            "system_metrics": health_status.get("system_metrics", {}),
+            "system_metrics": {
+                "cpu_percent": psutil.cpu_percent(interval=0.1),
+                "memory_percent": psutil.virtual_memory().percent,
+                "disk_percent": psutil.disk_usage('/').percent,
+                "memory_used_gb": round(psutil.virtual_memory().used / 1024 / 1024 / 1024, 2),
+                "disk_used_gb": round(psutil.disk_usage('/').used / 1024 / 1024 / 1024, 2)
+            },
             "issues": health_status.get("issues", {})
         }
     }
@@ -633,6 +673,48 @@ async def find_duplicates(request: Request):
     except Exception as e:
         logger.error(f"Error finding duplicates: {e}")
         return {"error": str(e)}
+
+@app.post("/index/parallel")
+async def parallel_index_files(request: Request):
+    """병렬 파일 인덱싱 - 고성능 처리"""
+    try:
+        body = await request.json()
+        directories = body.get("directories", [])
+        
+        # 인덱싱할 파일 목록 수집
+        files_to_index = []
+        for directory in directories:
+            if os.path.exists(directory):
+                for root, _, files in os.walk(directory):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        files_to_index.append(file_path)
+        
+        logger.info(f"Found {len(files_to_index)} files to index")
+        
+        # 병렬 처리 시작
+        results = enhanced_processor.process_files_parallel(files_to_index)
+        
+        return {
+            "success": True,
+            "results": results,
+            "message": f"Processed {results['processed']} files in {results['total_time']:.1f} seconds"
+        }
+        
+    except Exception as e:
+        logger.error(f"Parallel indexing error: {e}")
+        return {"success": False, "error": str(e)}
+
+@app.get("/monitor/parallel-stats")
+async def get_parallel_stats():
+    """병렬 처리 통계 조회"""
+    return {
+        "worker_processes": enhanced_processor.worker_processes,
+        "batch_size": enhanced_processor.batch_size,
+        "max_file_size_mb": enhanced_processor.max_file_size_bytes / 1024 / 1024,
+        "stats": enhanced_processor.stats
+    }
+
 
 if __name__ == "__main__":
     import uvicorn

@@ -23,5 +23,8 @@ psutil==5.9.7
 
 # Database (SQLite is built-in)
 
+# Vector Database
+qdrant-client==1.7.0
+
 # Additional dependencies for enhanced features
 supervisor==4.2.5

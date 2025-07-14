@@ -64,12 +64,12 @@ Successfully fixed Korean language support and enhanced the file organization fu
 - ✅ Ensured proper TypeScript typing
 
 ## API Endpoints Verified
-- ✅ `/api/search` - File search functionality
-- ✅ `/api/organize` - File organization with LLM support
-- ✅ `/api/task/{task_id}` - Background task monitoring
-- ✅ `/api/duplicates` - Duplicate file detection
-- ✅ `/api/recent` - Recent files tracking
-- ✅ `/api/metrics` - System performance metrics
+- ✅ `/search` - File search functionality
+- ✅ `/organize` - File organization with LLM support
+- ✅ `/task/{task_id}` - Background task monitoring
+- ✅ `/duplicates` - Duplicate file detection
+- ✅ `/recent` - Recent files tracking
+- ✅ `/metrics` - System performance metrics
 
 ## Build Verification
 - ✅ Web UI builds successfully with no errors

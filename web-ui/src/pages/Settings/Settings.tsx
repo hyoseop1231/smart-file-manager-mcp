@@ -27,6 +27,7 @@ import {
   MenuItem,
   Slider,
   Paper,
+  IconButton,
 } from '@mui/material';
 import {
   Storage as StorageIcon,
@@ -40,11 +41,20 @@ import {
   Refresh as RefreshIcon,
   Settings as SettingsIcon,
   Info as InfoIcon,
+  Folder as FolderIcon,
+  Add as AddIcon,
+  FolderOpen as FolderOpenIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { useFolders } from '../../contexts/FolderContext';
 
 const Settings: React.FC = () => {
   const { t } = useTranslation();
+  const { watchedFolders, toggleFolder, removeFolder, addFolder } = useFolders();
+  const [addFolderDialogOpen, setAddFolderDialogOpen] = useState(false);
+  const [newFolderPath, setNewFolderPath] = useState('');
+  const [newFolderName, setNewFolderName] = useState('');
+  
   const [settings, setSettings] = useState({
     // Storage Settings
     autoCleanup: true,
@@ -106,6 +116,19 @@ const Settings: React.FC = () => {
 
   const handleClearCache = () => {
     // Clear cache logic
+  };
+
+  const handleAddFolder = () => {
+    if (newFolderPath && newFolderName) {
+      addFolder({
+        path: newFolderPath,
+        name: newFolderName,
+        enabled: true,
+      });
+      setAddFolderDialogOpen(false);
+      setNewFolderPath('');
+      setNewFolderName('');
+    }
   };
 
   const formatBytes = (bytes: number) => {
@@ -172,6 +195,93 @@ const Settings: React.FC = () => {
               >
                 {t('settings.storage.clearCache') || 'Clear Cache'}
               </Button>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Watched Folders */}
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <FolderOpenIcon color="primary" sx={{ mr: 1 }} />
+                  <Typography variant="h6">{t('settings.folders.title') || 'Watched Folders'}</Typography>
+                </Box>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={() => setAddFolderDialogOpen(true)}
+                >
+                  {t('settings.folders.addFolder') || 'Add Folder'}
+                </Button>
+              </Box>
+
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  {t('settings.folders.description') || 'Enable or disable folders for intelligent file processing and organization'}
+                </Typography>
+              </Alert>
+
+              <List>
+                {watchedFolders.map((folder) => (
+                  <ListItem
+                    key={folder.id}
+                    sx={{
+                      border: 1,
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      mb: 1,
+                      bgcolor: folder.enabled ? 'action.hover' : 'background.paper',
+                    }}
+                  >
+                    <ListItemIcon>
+                      <FolderIcon color={folder.enabled ? 'primary' : 'disabled'} />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={folder.name}
+                      secondary={folder.path}
+                      primaryTypographyProps={{
+                        fontWeight: folder.enabled ? 600 : 400,
+                        color: folder.enabled ? 'text.primary' : 'text.disabled',
+                      }}
+                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={folder.enabled}
+                            onChange={() => toggleFolder(folder.id)}
+                            color="primary"
+                          />
+                        }
+                        label={folder.enabled ? t('common.enabled') : t('common.disabled')}
+                      />
+                      <IconButton
+                        edge="end"
+                        onClick={() => removeFolder(folder.id)}
+                        disabled={watchedFolders.length <= 1}
+                        size="small"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Box>
+                  </ListItem>
+                ))}
+              </List>
+
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  {t('settings.folders.info') || 'Folder Information'}:
+                </Typography>
+                <Typography variant="body2">
+                  • {t('settings.folders.totalFolders') || 'Total folders'}: {watchedFolders.length}
+                </Typography>
+                <Typography variant="body2">
+                  • {t('settings.folders.activeFolders') || 'Active folders'}: {watchedFolders.filter(f => f.enabled).length}
+                </Typography>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
@@ -560,6 +670,56 @@ const Settings: React.FC = () => {
           <Button onClick={() => setBackupDialogOpen(false)}>{t('common.cancel')}</Button>
           <Button onClick={handleBackupDatabase} color="primary" variant="contained">
             {t('settings.actions.createBackup') || 'Create Backup'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Folder Dialog */}
+      <Dialog
+        open={addFolderDialogOpen}
+        onClose={() => setAddFolderDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{t('settings.folders.addNewFolder') || 'Add New Folder'}</DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              {t('settings.folders.addWarning') || 'Note: You need to manually mount the folder in docker-compose.yml for it to be accessible.'}
+            </Typography>
+          </Alert>
+          <TextField
+            fullWidth
+            label={t('settings.folders.folderName') || 'Folder Name'}
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+            placeholder="e.g., Projects"
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            label={t('settings.folders.folderPath') || 'Container Path'}
+            value={newFolderPath}
+            onChange={(e) => setNewFolderPath(e.target.value)}
+            placeholder="/watch_directories/Projects"
+            helperText={t('settings.folders.pathHelperText') || 'Path inside the Docker container'}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setAddFolderDialogOpen(false);
+            setNewFolderPath('');
+            setNewFolderName('');
+          }}>
+            {t('common.cancel')}
+          </Button>
+          <Button 
+            onClick={handleAddFolder} 
+            color="primary" 
+            variant="contained"
+            disabled={!newFolderPath || !newFolderName}
+          >
+            {t('common.add') || 'Add'}
           </Button>
         </DialogActions>
       </Dialog>

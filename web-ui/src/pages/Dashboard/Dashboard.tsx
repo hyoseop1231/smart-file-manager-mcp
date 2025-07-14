@@ -81,8 +81,10 @@ const Dashboard: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'healthy': return <CheckCircleIcon color="success" />;
+      case 'available': return <CheckCircleIcon color="success" />;
       case 'warning': return <WarningIcon color="warning" />;
       case 'error': return <ErrorIcon color="error" />;
+      case 'unavailable': return <ErrorIcon color="error" />;
       default: return <CheckCircleIcon color="disabled" />;
     }
   };

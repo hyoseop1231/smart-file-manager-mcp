@@ -46,6 +46,7 @@ import {
 import { useQuery, useMutation } from 'react-query';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
+import { useFolders } from '../../contexts/FolderContext';
 
 interface OrganizationTask {
   task_id: string;
@@ -59,9 +60,11 @@ interface OrganizationTask {
 
 const Organization: React.FC = () => {
   const { t } = useTranslation();
+  const { getEnabledFolders } = useFolders();
+  const enabledFolders = getEnabledFolders();
   const [activeStep, setActiveStep] = useState(0);
-  const [sourceDir, setSourceDir] = useState('/Users/hyoseop1231/Desktop');
-  const [targetDir, setTargetDir] = useState('');
+  const [sourceDir, setSourceDir] = useState(enabledFolders[0]?.path || '/watch_directories/Desktop');
+  const [targetDir, setTargetDir] = useState(enabledFolders[0]?.path + '/Organized' || '/watch_directories/Desktop/Organized');
   const [organizationMethod, setOrganizationMethod] = useState('content');
   const [useLLM, setUseLLM] = useState(true);
   const [dryRun, setDryRun] = useState(true);
@@ -172,14 +175,32 @@ const Organization: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               {t('organization.sourceSelection.title')}
             </Typography>
-            <TextField
-              fullWidth
-              label={t('organization.sourceSelection.selectDirectory')}
-              value={sourceDir}
-              onChange={(e) => setSourceDir(e.target.value)}
-              helperText={t('organization.sourceHelperText') || 'Directory containing files to organize'}
-              sx={{ mb: 2 }}
-            />
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>{t('organization.sourceSelection.selectDirectory')}</InputLabel>
+              <Select
+                value={sourceDir}
+                label={t('organization.sourceSelection.selectDirectory')}
+                onChange={(e) => {
+                  setSourceDir(e.target.value);
+                  setTargetDir(e.target.value + '/Organized');
+                }}
+              >
+                {enabledFolders.map((folder) => (
+                  <MenuItem key={folder.id} value={folder.path}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <FolderIcon /> {folder.name}
+                    </Box>
+                  </MenuItem>
+                ))}
+                {enabledFolders.length === 0 && (
+                  <MenuItem disabled>
+                    <Typography color="text.secondary">
+                      {t('organization.noEnabledFolders') || 'No folders enabled. Please enable folders in Settings.'}
+                    </Typography>
+                  </MenuItem>
+                )}
+              </Select>
+            </FormControl>
             <TextField
               fullWidth
               label={t('organization.options.targetDirectory') + ' ' + t('common.optional', '(Optional)')}

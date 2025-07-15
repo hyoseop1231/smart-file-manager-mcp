@@ -7,6 +7,27 @@ import {
 import { z } from "zod";
 import axios from "axios";
 
+// Import multimedia schemas and handlers
+import {
+  AnalyzeMediaVisionSchema,
+  TranscribeMediaSchema,
+  SearchMultimediaSchema,
+  GenerateMediaPreviewSchema,
+  OrganizeMediaSmartSchema,
+  ExtractMediaContentSchema,
+  MonitorMediaChangesSchema,
+} from "./schemas/multimedia.js";
+
+import {
+  analyzeMediaVision,
+  transcribeMedia,
+  searchMultimedia,
+  generateMediaPreview,
+  organizeMediaSmart,
+  extractMediaContent,
+  monitorMediaChanges,
+} from "./handlers/multimedia.js";
+
 // Tool schemas
 const SearchFilesSchema = z.object({
   query: z.string().describe("Search query in natural language"),
@@ -228,6 +249,240 @@ class SmartFileManagerServer {
               options: { type: "object", description: "Operation-specific options" },
             },
             required: ["operation", "files"],
+          },
+        },
+        {
+          name: "analyze_media_vision",
+          description: "Analyze images and videos using AI vision (OCR, object detection, scene analysis, face detection)",
+          inputSchema: {
+            type: "object",
+            properties: {
+              filePath: { type: "string", description: "Path to the media file to analyze" },
+              analysisType: { 
+                type: "string", 
+                enum: ["caption", "objects", "scene", "text_ocr", "face_detection", "comprehensive"],
+                description: "Type of AI vision analysis (default: comprehensive)"
+              },
+              videoOptions: { 
+                type: "object",
+                properties: {
+                  frameInterval: { type: "number", description: "Analyze every N frames (default: 30)" },
+                  maxFrames: { type: "number", description: "Maximum frames to analyze (default: 10)" },
+                  keyFramesOnly: { type: "boolean", description: "Analyze only key frames (default: true)" }
+                }
+              },
+              language: { type: "string", description: "Language for OCR and descriptions (default: auto)" },
+            },
+            required: ["filePath"],
+          },
+        },
+        {
+          name: "transcribe_media",
+          description: "Transcribe audio and video files to text using AI speech recognition",
+          inputSchema: {
+            type: "object",
+            properties: {
+              filePath: { type: "string", description: "Path to audio/video file to transcribe" },
+              language: { 
+                type: "string", 
+                enum: ["auto", "ko", "en", "ja", "zh", "es", "fr", "de", "ru"],
+                description: "Language of the audio (default: auto)"
+              },
+              model: { 
+                type: "string", 
+                enum: ["tiny", "base", "small", "medium", "large"],
+                description: "Whisper model size (default: base)"
+              },
+              includeTimestamps: { type: "boolean", description: "Include timestamps in transcript (default: false)" },
+              outputFormat: { 
+                type: "string", 
+                enum: ["text", "srt", "vtt", "json"],
+                description: "Output format for transcription (default: text)"
+              },
+              speakerDiarization: { type: "boolean", description: "Identify different speakers (default: false)" },
+            },
+            required: ["filePath"],
+          },
+        },
+        {
+          name: "search_multimedia",
+          description: "Search for multimedia files using semantic search, visual similarity, transcripts, or AI tags",
+          inputSchema: {
+            type: "object",
+            properties: {
+              query: { type: "string", description: "Text search query" },
+              searchMode: { 
+                type: "string", 
+                enum: ["semantic", "visual_similarity", "transcript", "ai_tags", "comprehensive"],
+                description: "Search mode (default: comprehensive)"
+              },
+              mediaTypes: { 
+                type: "array", 
+                items: { type: "string", enum: ["image", "video", "audio", "all"] },
+                description: "Media types to search (default: all)"
+              },
+              visualFeatures: { 
+                type: "object",
+                properties: {
+                  colors: { type: "array", items: { type: "string" }, description: "Dominant colors to search" },
+                  objects: { type: "array", items: { type: "string" }, description: "Objects to find in images" },
+                  scenes: { type: "array", items: { type: "string" }, description: "Scene types (indoor, outdoor, etc)" },
+                  faces: { type: "number", description: "Number of faces to look for" }
+                }
+              },
+              dateRange: { 
+                type: "object",
+                properties: {
+                  start: { type: "string", description: "Start date (ISO format)" },
+                  end: { type: "string", description: "End date (ISO format)" }
+                }
+              },
+              limit: { type: "number", description: "Maximum results (default: 20)" },
+            },
+          },
+        },
+        {
+          name: "generate_media_preview",
+          description: "Generate thumbnails, animated GIFs, video summaries, or contact sheets for media files",
+          inputSchema: {
+            type: "object",
+            properties: {
+              filePath: { type: "string", description: "Path to media file" },
+              previewType: { 
+                type: "string", 
+                enum: ["thumbnail", "animated_gif", "video_summary", "audio_waveform", "contact_sheet"],
+                description: "Type of preview to generate"
+              },
+              options: { 
+                type: "object",
+                properties: {
+                  size: { type: "string", enum: ["small", "medium", "large", "custom"], description: "Preview size (default: medium)" },
+                  customSize: { 
+                    type: "object",
+                    properties: {
+                      width: { type: "number" },
+                      height: { type: "number" }
+                    }
+                  },
+                  format: { type: "string", enum: ["jpeg", "png", "webp", "gif"], description: "Output format (default: jpeg)" },
+                  quality: { type: "number", description: "Quality 1-100 (default: 85)" },
+                  duration: { type: "number", description: "Duration in seconds for video summaries" },
+                  fps: { type: "number", description: "Frames per second for GIFs (default: 10)" },
+                  columns: { type: "number", description: "Columns for contact sheets (default: 4)" },
+                  rows: { type: "number", description: "Rows for contact sheets (default: 3)" }
+                }
+              },
+            },
+            required: ["filePath", "previewType"],
+          },
+        },
+        {
+          name: "organize_media_smart",
+          description: "Organize media files intelligently using AI-powered grouping by faces, scenes, events, or quality",
+          inputSchema: {
+            type: "object",
+            properties: {
+              sourceDir: { type: "string", description: "Source directory containing media" },
+              targetDir: { type: "string", description: "Target directory for organized files" },
+              organizationMethod: { 
+                type: "string", 
+                enum: ["faces", "scenes", "events", "ai_categories", "quality", "duplicate_removal", "date_location", "content_type"],
+                description: "Organization method"
+              },
+              aiGrouping: { 
+                type: "object",
+                properties: {
+                  groupSimilar: { type: "boolean", description: "Group visually similar media (default: true)" },
+                  createAlbums: { type: "boolean", description: "Create album folders (default: true)" },
+                  detectEvents: { type: "boolean", description: "Detect and group by events (default: true)" },
+                  similarityThreshold: { type: "number", description: "Similarity threshold 0-1 (default: 0.8)" },
+                  minGroupSize: { type: "number", description: "Minimum files for a group (default: 3)" }
+                }
+              },
+              preserveOriginals: { type: "boolean", description: "Keep original files (default: true)" },
+              dryRun: { type: "boolean", description: "Preview without moving files (default: false)" },
+            },
+            required: ["sourceDir", "organizationMethod"],
+          },
+        },
+        {
+          name: "extract_media_content",
+          description: "Extract text, faces, objects, landmarks, metadata, subtitles, or frames from media files",
+          inputSchema: {
+            type: "object",
+            properties: {
+              filePath: { type: "string", description: "Path to media file" },
+              extractionType: { 
+                type: "array", 
+                items: { 
+                  type: "string", 
+                  enum: ["text", "faces", "objects", "landmarks", "metadata", "subtitles", "audio", "frames"] 
+                },
+                description: "Types of content to extract"
+              },
+              outputFormat: { 
+                type: "string", 
+                enum: ["json", "text", "srt", "vtt", "csv"],
+                description: "Output format (default: json)"
+              },
+              options: { 
+                type: "object",
+                properties: {
+                  frameCount: { type: "number", description: "Number of frames to extract (default: 10)" },
+                  includeThumbnails: { type: "boolean", description: "Include thumbnails (default: true)" },
+                  faceRecognition: { type: "boolean", description: "Enable face recognition (default: false)" },
+                  objectConfidence: { type: "number", description: "Object detection confidence 0-1 (default: 0.5)" }
+                }
+              },
+            },
+            required: ["filePath", "extractionType"],
+          },
+        },
+        {
+          name: "monitor_media_changes",
+          description: "Monitor directories for new media files and auto-process them (index, thumbnail, transcribe, analyze)",
+          inputSchema: {
+            type: "object",
+            properties: {
+              directories: { 
+                type: "array", 
+                items: { type: "string" },
+                description: "Directories to monitor"
+              },
+              autoProcess: { 
+                type: "array", 
+                items: { 
+                  type: "string", 
+                  enum: ["index", "thumbnail", "transcribe", "analyze", "organize"] 
+                },
+                description: "Auto-processing actions (default: index, thumbnail)"
+              },
+              notifications: { 
+                type: "object",
+                properties: {
+                  onNewMedia: { type: "boolean", description: "Notify on new media (default: true)" },
+                  onDuplicates: { type: "boolean", description: "Notify on duplicates (default: true)" },
+                  onLargeFiles: { type: "boolean", description: "Notify on large files (default: true)" },
+                  largeFileThresholdMB: { type: "number", description: "Large file threshold in MB (default: 100)" }
+                }
+              },
+              fileFilters: { 
+                type: "object",
+                properties: {
+                  extensions: { type: "array", items: { type: "string" } },
+                  minSizeMB: { type: "number" },
+                  maxSizeMB: { type: "number" }
+                }
+              },
+              schedule: { 
+                type: "object",
+                properties: {
+                  enabled: { type: "boolean", description: "Enable scheduled processing (default: false)" },
+                  intervalMinutes: { type: "number", description: "Processing interval in minutes (default: 60)" }
+                }
+              },
+            },
+            required: ["directories"],
           },
         },
       ],
@@ -561,6 +816,41 @@ class SmartFileManagerServer {
                 },
               ],
             };
+          }
+
+          case "analyze_media_vision": {
+            const validatedArgs = AnalyzeMediaVisionSchema.parse(args);
+            return await analyzeMediaVision(validatedArgs);
+          }
+
+          case "transcribe_media": {
+            const validatedArgs = TranscribeMediaSchema.parse(args);
+            return await transcribeMedia(validatedArgs);
+          }
+
+          case "search_multimedia": {
+            const validatedArgs = SearchMultimediaSchema.parse(args);
+            return await searchMultimedia(validatedArgs);
+          }
+
+          case "generate_media_preview": {
+            const validatedArgs = GenerateMediaPreviewSchema.parse(args);
+            return await generateMediaPreview(validatedArgs);
+          }
+
+          case "organize_media_smart": {
+            const validatedArgs = OrganizeMediaSmartSchema.parse(args);
+            return await organizeMediaSmart(validatedArgs);
+          }
+
+          case "extract_media_content": {
+            const validatedArgs = ExtractMediaContentSchema.parse(args);
+            return await extractMediaContent(validatedArgs);
+          }
+
+          case "monitor_media_changes": {
+            const validatedArgs = MonitorMediaChangesSchema.parse(args);
+            return await monitorMediaChanges(validatedArgs);
           }
 
           default:

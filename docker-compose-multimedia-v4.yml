@@ -1,0 +1,213 @@
+services:
+  # Smart File Manager v4.0 - Enhanced Multimedia API
+  smart-file-manager-v4:
+    build: 
+      context: ./ai-services
+      dockerfile: Dockerfile_multimedia_v4
+    container_name: smart-file-manager-multimedia-v4
+    privileged: true  # Enable system metrics access
+    pid: "host"       # Use host PID namespace for system info
+    ports:
+      - "8001:8001"   # Multimedia API
+      - "9001:9001"   # Supervisor web interface
+    volumes:
+      # Watch directories (customize as needed)
+      - ${HOME_DOCUMENTS:-/Users/hyoseop1231/Documents}:/watch_directories/Documents
+      - ${HOME_DOWNLOADS:-/Users/hyoseop1231/Downloads}:/watch_directories/Downloads
+      - ${HOME_DESKTOP:-/Users/hyoseop1231/Desktop}:/watch_directories/Desktop
+      - ${HOME_PICTURES:-/Users/hyoseop1231/Pictures}:/watch_directories/Pictures
+      - ${HOME_MOVIES:-/Users/hyoseop1231/Movies}:/watch_directories/Movies
+      - ${HOME_MUSIC:-/Users/hyoseop1231/Music}:/watch_directories/Music
+      
+      # Persistent data storage
+      - smart_file_data_v4:/data/db
+      - smart_file_embeddings_v4:/data/embeddings
+      - smart_file_metadata_v4:/data/metadata
+      - smart_file_multimedia_cache:/data/multimedia_cache
+      
+      # AI model cache (optional, for persistent model storage)
+      - ai_model_cache:/root/.cache
+    
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PORT=8001
+      - DB_PATH=/data/db/file-index.db
+      - EMBEDDINGS_PATH=/data/embeddings
+      - METADATA_PATH=/data/metadata
+      - MULTIMEDIA_CACHE_PATH=/data/multimedia_cache
+      
+      # Multimedia processing settings
+      - ENABLE_AI_VISION=true
+      - ENABLE_STT=true
+      - ENABLE_OCR=true
+      - MAX_FILE_SIZE_MB=500
+      - MAX_VIDEO_SIZE_MB=1024
+      - MAX_AUDIO_SIZE_MB=100
+      - MAX_IMAGE_SIZE_MB=50
+      
+      # AI model settings
+      - WHISPER_MODEL=base
+      - CLIP_MODEL=ViT-B/32
+      - BLIP_MODEL=Salesforce/blip-image-captioning-base
+      
+      # Processing settings
+      - WORKER_PROCESSES=5
+      - BATCH_SIZE=10
+      - PARALLEL_PROCESSING=true
+      
+      # External services
+      - OLLAMA_API_URL=http://host.docker.internal:11434/api/generate
+      - QDRANT_URL=http://qdrant:6333
+      
+      # Directory settings
+      - WATCH_DIRECTORIES=/watch_directories
+      - HOME_DOCUMENTS=/watch_directories/Documents
+      - HOME_DOWNLOADS=/watch_directories/Downloads
+      - HOME_DESKTOP=/watch_directories/Desktop
+      - HOME_PICTURES=/watch_directories/Pictures
+      - HOME_MOVIES=/watch_directories/Movies
+      - HOME_MUSIC=/watch_directories/Music
+      
+      # Scheduling intervals
+      - FULL_INDEXING_INTERVAL=7200    # 2 hours
+      - QUICK_INDEXING_INTERVAL=1800   # 30 minutes
+      - CLEANUP_INTERVAL=86400         # 24 hours
+      - AI_ANALYSIS_INTERVAL=43200     # 12 hours
+    
+    depends_on:
+      - qdrant
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    
+    # Resource limits for multimedia processing
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: smart-file-qdrant-v4
+    ports:
+      - "6333:6333"
+      - "6334:6334"  # gRPC port
+    volumes:
+      - qdrant_storage_v4:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      - QDRANT__SERVICE__HTTP_PORT=6333
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Enhanced MCP Server for Claude Desktop integration
+  mcp-server-v4:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    container_name: smart-file-mcp-server-v4
+    environment:
+      - AI_SERVICE_URL=http://smart-file-manager-v4:8001
+      - MULTIMEDIA_FEATURES=true
+      - API_VERSION=4.0
+    depends_on:
+      - smart-file-manager-v4
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+  # Enhanced Web UI with multimedia preview support
+  web-ui-v4:
+    build:
+      context: ./web-ui
+      dockerfile: Dockerfile
+    container_name: smart-file-manager-ui-v4
+    ports:
+      - "3002:80"
+    depends_on:
+      - smart-file-manager-v4
+    environment:
+      - REACT_APP_API_URL=
+      - REACT_APP_MULTIMEDIA_FEATURES=true
+      - REACT_APP_THUMBNAIL_SUPPORT=true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching and job queues (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: smart-file-redis-v4
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_v4:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Monitoring and metrics (optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: smart-file-prometheus-v4
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data_v4:/prometheus
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+
+volumes:
+  # Main application data
+  smart_file_data_v4:
+    driver: local
+  smart_file_embeddings_v4:
+    driver: local
+  smart_file_metadata_v4:
+    driver: local
+  smart_file_multimedia_cache:
+    driver: local
+  
+  # Vector database
+  qdrant_storage_v4:
+    driver: local
+  
+  # AI model cache
+  ai_model_cache:
+    driver: local
+  
+  # Caching and monitoring
+  redis_data_v4:
+    driver: local
+  prometheus_data_v4:
+    driver: local
+
+networks:
+  default:
+    name: smart-file-manager-multimedia-network-v4
+    driver: bridge

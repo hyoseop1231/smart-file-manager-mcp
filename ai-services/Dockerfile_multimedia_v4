@@ -1,0 +1,183 @@
+FROM python:3.11-slim
+
+# Install comprehensive system dependencies for multimedia processing
+RUN apt-get update && apt-get install -y \
+    # Basic tools
+    curl \
+    wget \
+    unzip \
+    git \
+    supervisor \
+    \
+    # Build tools
+    build-essential \
+    python3-dev \
+    gcc \
+    g++ \
+    cmake \
+    pkg-config \
+    \
+    # File type detection
+    libmagic1 \
+    libmagic-dev \
+    \
+    # Image processing dependencies
+    tesseract-ocr \
+    tesseract-ocr-kor \
+    tesseract-ocr-eng \
+    tesseract-ocr-jpn \
+    tesseract-ocr-chi-sim \
+    libtesseract-dev \
+    libleptonica-dev \
+    imagemagick \
+    libopencv-dev \
+    python3-opencv \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    libwebp-dev \
+    libheif-dev \
+    \
+    # Video processing dependencies  
+    ffmpeg \
+    libavcodec-dev \
+    libavformat-dev \
+    libavutil-dev \
+    libswscale-dev \
+    \
+    # Audio processing dependencies
+    libsndfile1 \
+    libsndfile1-dev \
+    libasound2-dev \
+    portaudio19-dev \
+    libportaudio2 \
+    libportaudiocpp0 \
+    alsa-utils \
+    \
+    # LibreOffice for HWP/HWPX support
+    libreoffice \
+    libreoffice-java-common \
+    \
+    # Additional multimedia libraries
+    libfftw3-dev \
+    libsamplerate0-dev \
+    libsox-dev \
+    sox \
+    \
+    # Development libraries
+    libssl-dev \
+    libffi-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    llvm \
+    libncurses5-dev \
+    libncursesw5-dev \
+    xz-utils \
+    tk-dev \
+    libxml2-dev \
+    libxmlsec1-dev \
+    \
+    # Clean up
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Set up working directory
+WORKDIR /app
+
+# Copy requirements and install Python packages
+COPY requirements_multimedia.txt .
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+RUN pip install --no-cache-dir -r requirements_multimedia.txt
+
+# Install additional AI models (optional, can be done at runtime)
+# RUN python -c "import whisper; whisper.load_model('base')"
+
+# Copy application files
+COPY multimedia_api_v4.py .
+COPY enhanced_indexer_v4.py .
+COPY multimedia_processor.py .
+COPY image_processor.py .
+COPY video_processor.py .
+COPY audio_processor.py .
+COPY ai_vision_service.py .
+COPY speech_recognition_service.py .
+COPY content_extractor.py .
+COPY hwp_processor.py .
+COPY db_manager.py .
+COPY db_connection_pool.py .
+COPY performance_monitor.py .
+COPY enhanced_file_processor.py .
+
+# Copy existing modules for compatibility
+COPY llm_organizer.py .
+COPY enhanced_llm_organizer.py .
+COPY smart_model_selector.py .
+COPY scheduler.py .
+COPY mafm_bridge.py .
+COPY organizer_bridge.py .
+COPY ollama_bridge.py .
+COPY multi_agent_manager.py .
+COPY embedding_manager.py .
+COPY enhanced_embedding_manager.py .
+COPY qdrant_vector_manager.py .
+COPY vector_api_endpoints.py .
+
+# Copy additional directories
+COPY mafm/ ./mafm/
+COPY organizer/ ./organizer/
+
+# Create directories for data, logs, and multimedia cache
+RUN mkdir -p /data/db /data/embeddings /data/metadata /var/log/supervisor \
+    && mkdir -p /data/multimedia_cache/thumbnails \
+    && mkdir -p /data/multimedia_cache/video_thumbnails \
+    && mkdir -p /data/multimedia_cache/audio \
+    && mkdir -p /data/multimedia_cache/ai_vision \
+    && mkdir -p /data/multimedia_cache/speech_recognition
+
+# Create supervisor configuration for multimedia API
+RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'nodaemon=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'user=root' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '[program:multimedia_api]' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'command=python multimedia_api_v4.py' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'directory=/app' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'stderr_logfile=/var/log/supervisor/multimedia_api.err.log' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'stdout_logfile=/var/log/supervisor/multimedia_api.out.log' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '[program:scheduler]' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'command=python scheduler.py' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'directory=/app' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'stderr_logfile=/var/log/supervisor/scheduler.err.log' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'stdout_logfile=/var/log/supervisor/scheduler.out.log' >> /etc/supervisor/conf.d/supervisord.conf
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8001
+ENV DB_PATH=/data/db/file-index.db
+ENV EMBEDDINGS_PATH=/data/embeddings
+ENV METADATA_PATH=/data/metadata
+ENV MULTIMEDIA_CACHE_PATH=/data/multimedia_cache
+
+# Set up Tesseract data path
+ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata/
+
+# FFmpeg environment variables
+ENV FFMPEG_BINARY=/usr/bin/ffmpeg
+ENV FFPROBE_BINARY=/usr/bin/ffprobe
+
+# Health check with multimedia API
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8001/health || exit 1
+
+# Expose port
+EXPOSE 8001 9001
+
+# Run multimedia API and scheduler using supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

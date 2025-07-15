@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "smart-file-manager": {
+      "command": "node",
+      "args": [
+        "/Users/hyoseop1231/MCP_app/smart-file-manager-mcp/mcp-server/dist/index.js"
+      ],
+      "env": {
+        "AI_SERVICE_URL": "http://localhost:8001",
+        "MULTIMEDIA_FEATURES": "true",
+        "API_VERSION": "4.0"
+      }
+    }
+  },
+  "globalShortcut": "CommandOrControl+Shift+M"
+}

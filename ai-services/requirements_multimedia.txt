@@ -1,0 +1,88 @@
+# Smart File Manager v4.0 - Multimedia Requirements
+# Core dependencies
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+pydantic>=2.4.2
+python-multipart>=0.0.6
+aiofiles>=23.2.1
+
+# Database and storage
+sqlite-utils>=3.35.2
+qdrant-client>=1.6.9
+chromadb>=0.4.15
+
+# File processing and content extraction
+python-magic>=0.4.27
+chardet>=5.2.0
+pathlib-mate>=1.0.0
+watchdog>=3.0.0
+
+# Text and document processing  
+pypdf2>=3.0.1
+python-docx>=1.1.0
+openpyxl>=3.1.2
+markdown>=3.5.1
+beautifulsoup4>=4.12.2
+lxml>=4.9.3
+
+# HWP/HWPX Korean document support
+pyhwp>=0.1b12
+
+# Image processing and computer vision
+Pillow>=10.1.0
+opencv-python>=4.8.1.78
+pytesseract>=0.3.10
+exifread>=3.0.0
+imageio>=2.33.0
+
+# Video and audio processing
+ffmpeg-python>=0.2.0
+moviepy>=1.0.3
+pydub>=0.25.1
+librosa>=0.10.1
+soundfile>=0.12.1
+
+# Audio metadata extraction
+mutagen>=1.47.0
+eyed3>=0.9.7
+
+# Speech recognition and AI (basic functionality)
+SpeechRecognition>=3.8.1
+# openai-whisper>=20231117  # Comment out for faster build, install at runtime
+# vosk>=0.3.45  # Comment out for faster build
+
+# AI and machine learning (essential only)
+# torch>=2.0.0  # Comment out for faster build
+# transformers>=4.30.0  # Comment out for faster build
+# sentence-transformers>=2.2.0  # Comment out for faster build
+numpy>=1.24.3
+scikit-learn>=1.3.2
+
+# Computer vision models (optional)
+# clip-by-openai  # Uncomment if CLIP is needed
+# timm>=0.9.12
+
+# Web and API
+httpx>=0.25.2
+aiohttp>=3.9.0
+requests>=2.31.0
+
+# System monitoring and performance
+psutil>=5.9.6
+schedule>=1.2.0
+
+# Development and testing
+pytest>=7.4.3
+pytest-asyncio>=0.21.1
+black>=23.11.0
+flake8>=6.1.0
+
+# Caching and serialization
+redis>=5.0.1
+joblib>=1.3.2
+
+# Additional utilities
+tqdm>=4.66.1
+python-dateutil>=2.8.2
+pytz>=2023.3
+rich>=13.7.0

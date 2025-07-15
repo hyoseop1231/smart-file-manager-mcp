@@ -1,7 +1,7 @@
 {
   "name": "smart-file-manager-mcp",
-  "version": "3.0.0",
-  "description": "MCP server for intelligent file management with semantic search, AI organization, Korean language support, and web UI dashboard",
+  "version": "4.0.0",
+  "description": "MCP server for intelligent file management with semantic search, AI organization, Korean language support, web UI dashboard, and comprehensive multimedia processing (AI vision, transcription, smart organization)",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {

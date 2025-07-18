@@ -1,0 +1,43 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'smart-file-manager'
+
+# Alertmanager configuration (optional)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# Load rules once and periodically evaluate them
+rule_files: []
+
+# Scrape configurations
+scrape_configs:
+  # Smart File Manager API metrics
+  - job_name: 'smart-file-manager-api'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['host.docker.internal:8001']
+        labels:
+          service: 'multimedia-api'
+          component: 'api'
+    metrics_path: '/metrics'
+    
+  # Supervisor web interface metrics  
+  - job_name: 'smart-file-manager-supervisor'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['host.docker.internal:9001']
+        labels:
+          service: 'supervisor'
+          component: 'process-manager'
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+          component: 'monitoring'

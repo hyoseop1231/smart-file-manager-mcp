@@ -1,0 +1,7 @@
+.env
+*.so
+*.o
+__pycache__
+
+mafm/volumes
+mafm/filesystem.db

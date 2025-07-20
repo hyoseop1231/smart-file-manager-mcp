@@ -821,6 +821,15 @@ async def track_requests(request: Request, call_next):
     return response
 
 
+# Include disk management API
+try:
+    from disk_management_api import router as disk_router
+    app.include_router(disk_router)
+    logger.info("Disk management API loaded successfully")
+except ImportError as e:
+    logger.warning(f"Disk management API not available: {e}")
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8001))

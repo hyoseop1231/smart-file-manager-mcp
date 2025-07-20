@@ -238,6 +238,108 @@ Smart File Manager의 멀티미디어 API는 파일 검색, AI 분석, 썸네일
 }
 ```
 
+### 8. 디스크 관리 API
+
+#### `GET /disk/usage`
+
+현재 디스크 사용률 정보를 조회합니다.
+
+**응답 예제:**
+```json
+{
+  "success": true,
+  "data": {
+    "total_bytes": 63350988800,
+    "used_bytes": 57982697472,
+    "free_bytes": 2588635136,
+    "usage_percent": 95.8,
+    "total_gb": 59.0,
+    "used_gb": 54.0,
+    "free_gb": 2.4,
+    "warning_level": "critical",
+    "message": "디스크 공간이 심각하게 부족합니다. 즉시 정리가 필요합니다."
+  },
+  "timestamp": "2025-07-20T10:30:15.123456"
+}
+```
+
+#### `POST /disk/cleanup/thumbnails`
+
+오래된 썸네일을 정리합니다.
+
+**파라미터:**
+- `days` (integer, optional): 이 일수보다 오래된 썸네일 삭제 (기본값: 30)
+
+**응답 예제:**
+```json
+{
+  "success": true,
+  "cleaned_files": 1523,
+  "cleaned_bytes": 524288000,
+  "cleaned_mb": 500.0,
+  "disk_usage_after": {
+    "usage_percent": 93.2,
+    "free_gb": 3.9
+  },
+  "timestamp": "2025-07-20T10:31:45.678901"
+}
+```
+
+#### `POST /disk/cleanup/temp`
+
+임시 파일을 정리합니다.
+
+**응답 예제:**
+```json
+{
+  "success": true,
+  "cleaned_files": 234,
+  "cleaned_bytes": 104857600,
+  "cleaned_mb": 100.0,
+  "disk_usage_after": {
+    "usage_percent": 92.8,
+    "free_gb": 4.3
+  },
+  "timestamp": "2025-07-20T10:32:30.123456"
+}
+```
+
+#### `GET /disk/recommendations`
+
+디스크 정리 권장사항을 제공합니다.
+
+**응답 예제:**
+```json
+{
+  "success": true,
+  "current_usage": {
+    "usage_percent": 95.8,
+    "free_gb": 2.4
+  },
+  "recommendations": [
+    {
+      "type": "thumbnails",
+      "description": "썸네일 캐시가 1GB를 초과했습니다",
+      "action": "30일 이상 된 썸네일 정리를 권장합니다",
+      "potential_savings_mb": 700.5
+    },
+    {
+      "type": "critical",
+      "description": "디스크 사용률이 90%를 초과했습니다",
+      "action": "즉시 불필요한 파일을 정리하세요",
+      "potential_savings_mb": "varies"
+    },
+    {
+      "type": "docker",
+      "description": "사용하지 않는 Docker 이미지와 컨테이너",
+      "action": "docker system prune -a 명령으로 정리 가능",
+      "potential_savings_mb": "varies"
+    }
+  ],
+  "timestamp": "2025-07-20T10:33:15.789012"
+}
+```
+
 ## 오류 처리
 
 모든 API는 일관된 오류 응답 형식을 사용합니다:

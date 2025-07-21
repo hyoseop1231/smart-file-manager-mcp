@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart File Manager v4.0</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Smart File Manager v4.0</h1>
+            <p>AI-Powered File Management System</p>
+        </header>
+        
+        <div class="stats-container">
+            <div class="stat-card">
+                <h3>📁 Total Files</h3>
+                <p id="total-files">Loading...</p>
+            </div>
+            <div class="stat-card">
+                <h3>🎬 Multimedia</h3>
+                <p id="multimedia-files">Loading...</p>
+            </div>
+            <div class="stat-card">
+                <h3>💾 Disk Usage</h3>
+                <p id="disk-usage">Loading...</p>
+            </div>
+            <div class="stat-card">
+                <h3>🤖 AI Analyzed</h3>
+                <p id="ai-analyzed">Loading...</p>
+            </div>
+        </div>
+        
+        <div class="search-container">
+            <h2>🔍 Search Files</h2>
+            <form id="search-form">
+                <input type="text" id="search-query" placeholder="Enter search query..." required>
+                <select id="media-type">
+                    <option value="">All Types</option>
+                    <option value="image">Images</option>
+                    <option value="video">Videos</option>
+                    <option value="audio">Audio</option>
+                    <option value="document">Documents</option>
+                    <option value="text">Text</option>
+                </select>
+                <button type="submit">Search</button>
+            </form>
+        </div>
+        
+        <div id="results-container" class="results-container"></div>
+        
+        <footer>
+            <p>Smart File Manager MCP © 2025 | <a href="http://localhost:9090" target="_blank">Prometheus</a> | <a href="http://localhost:3003" target="_blank">Grafana</a></p>
+        </footer>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>

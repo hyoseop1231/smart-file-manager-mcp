@@ -1,0 +1,38 @@
+{
+  "name": "smart-file-manager-mcp-server",
+  "version": "4.0.2",
+  "description": "MCP Server for Smart File Manager - Claude Desktop Integration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --inspect server.js",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "file-management",
+    "ai"
+  ],
+  "author": "Smart File Manager Team",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.4.0",
+    "axios": "^1.6.0",
+    "fs-extra": "^11.1.1",
+    "path": "^0.12.7",
+    "mime-types": "^2.1.35"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hyoseop1231/smart-file-manager-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hyoseop1231/smart-file-manager-mcp/issues"
+  },
+  "homepage": "https://github.com/hyoseop1231/smart-file-manager-mcp#readme"
+}

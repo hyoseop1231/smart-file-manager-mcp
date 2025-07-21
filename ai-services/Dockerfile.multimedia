@@ -1,0 +1,64 @@
+# Smart File Manager Multimedia API Dockerfile
+# Python 3.11 기반 멀티미디어 처리 서버
+
+FROM python:3.11-slim
+
+# 시스템 의존성 설치
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libsqlite3-dev \
+    ffmpeg \
+    libavcodec-extra \
+    libreoffice \
+    curl \
+    supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+# 작업 디렉토리 설정
+WORKDIR /app
+
+# Python 요구사항 복사 및 설치
+COPY requirements_multimedia.txt .
+RUN pip install --no-cache-dir -r requirements_multimedia.txt
+
+# 추가 AI/ML 라이브러리 설치
+RUN pip install --no-cache-dir \
+    torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu \
+    transformers \
+    sentence-transformers \
+    pillow \
+    opencv-python-headless \
+    speechrecognition \
+    pydub \
+    mutagen \
+    python-magic \
+    qdrant-client \
+    redis \
+    prometheus-client \
+    psutil
+
+# 애플리케이션 코드 복사
+COPY . /app/ai-services/
+
+# Supervisor 설정
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# 포트 노출
+EXPOSE 8001 9001
+
+# 데이터 디렉토리 생성
+RUN mkdir -p /data/db /data/embeddings /data/metadata /data/thumbnails /data/video_thumbnails
+
+# 권한 설정
+RUN chmod -R 755 /app && chmod -R 777 /data
+
+# 환경 변수 설정
+ENV PYTHONPATH=/app/ai-services
+ENV PYTHONUNBUFFERED=1
+
+# 헬스체크
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:8001/health || exit 1
+
+# Supervisor로 실행
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

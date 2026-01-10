@@ -1,7 +1,7 @@
 ---
 id: SPEC-API-001
 version: "1.0.0"
-status: "draft"
+status: "completed"
 created: "2026-01-10"
 updated: "2026-01-10"
 author: "Developer"

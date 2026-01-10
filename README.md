@@ -34,26 +34,70 @@ Smart File Manager MCP는 Claude Desktop과 통합되는 고급 파일 관리 �
 
 ## 📦 시스템 구조
 
+### v5.0 아키텍처 (리팩토링 후)
+
 ```
 smart-file-manager-mcp/
-├── ai-services/           # AI 서비스 모듈
-│   ├── multimedia_api_v4.py    # 멀티미디어 API 서버
-│   ├── enhanced_indexer_v4.py  # 파일 인덱싱 엔진
+├── src/smart_file_manager/      # v5.0 리팩토링 모듈
+│   ├── core/                    # 핵심 설정 및 예외
+│   │   ├── config.py            # Settings (pydantic-settings)
+│   │   └── exceptions.py        # 커스텀 예외 클래스
+│   ├── infrastructure/          # 인프라 계층
+│   │   └── cache/               # 캐시 시스템
+│   │       ├── base.py          # CacheInterface (추상 클래스)
+│   │       ├── memory_cache.py  # MemoryCache
+│   │       └── redis_cache.py   # RedisCache
+│   └── services/                # 서비스 계층
+│       ├── openrouter_client.py # OpenRouter API 클라이언트
+│       └── model_config.py      # 모델 티어 및 Fallback 설정
+├── ai-services/                 # Legacy AI 서비스 모듈
+│   ├── multimedia_api_v4.py     # 멀티미디어 API 서버
+│   ├── enhanced_indexer_v4.py   # 파일 인덱싱 엔진
 │   ├── multimedia_processor.py  # 멀티미디어 처리
-│   ├── ai_vision_service.py    # AI 비전 서비스
+│   ├── ai_vision_service.py     # AI 비전 서비스
 │   ├── speech_recognition_service.py  # 음성 인식
-│   └── db_connection_pool.py   # DB 연결 풀
-├── monitoring/            # 모니터링 설정
+│   └── db_connection_pool.py    # DB 연결 풀
+├── monitoring/                  # 모니터링 설정
 │   ├── prometheus.yml
 │   └── grafana/
-└── docker-compose.yml     # Docker 설정
+└── docker-compose.yml           # Docker 설정
 ```
 
-## 🆕 v5.0.0 리팩토링 (SPEC-INFRA-001)
+### API 클라이언트 아키텍처 다이어그램
 
-### Phase 1: 인프라 설정 완료
+```
+                    ┌─────────────────────────────────────────────────┐
+                    │              OpenRouter API Client              │
+                    │                (SPEC-API-001)                   │
+                    └─────────────────────────────────────────────────┘
+                                         │
+                    ┌────────────────────┼────────────────────┐
+                    │                    │                    │
+                    ▼                    ▼                    ▼
+            ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+            │   Primary    │    │  Fallback 1  │    │  Fallback 2  │
+            │  (Balanced)  │───▶│  (Low-cost)  │───▶│    (Free)    │
+            │ Gemini Flash │    │  Qwen 2.5 VL │    │  Gemini Free │
+            │  $0.10/1M in │    │  $0.05/1M in │    │     $0       │
+            └──────────────┘    └──────────────┘    └──────────────┘
+                    │                    │                    │
+                    └────────────────────┼────────────────────┘
+                                         │
+                    ┌────────────────────┼────────────────────┐
+                    │                    │                    │
+                    ▼                    ▼                    ▼
+            ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+            │    Cache     │    │    Retry     │    │    Budget    │
+            │   (7d TTL)   │    │  (Exp B/O)   │    │  Monitoring  │
+            │ Redis/Memory │    │ 1s→2s→4s+J  │    │ $1/d, $30/m  │
+            └──────────────┘    └──────────────┘    └──────────────┘
+```
 
-**새로운 아키텍처**:
+## 🆕 v5.0.0 리팩토링
+
+### Phase 1: 인프라 설정 (SPEC-INFRA-001) - 완료
+
+**인프라 아키텍처**:
 ```
 src/smart_file_manager/
 ├── core/
@@ -72,17 +116,55 @@ src/smart_file_manager/
 - **이중 캐시 시스템**: Redis (기본) + Memory (Fallback)
 - **테스트 커버리지**: 99%+ (77개 테스트 통과)
 
-### v5.0 환경 변수 (신규)
+### Phase 2: OpenRouter API 클라이언트 (SPEC-API-001) - 완료
+
+**API 클라이언트 아키텍처**:
+```
+src/smart_file_manager/
+└── services/
+    ├── openrouter_client.py    # 핵심 API 클라이언트
+    └── model_config.py         # 모델 티어 및 Fallback 설정
+```
+
+**핵심 기능**:
+- **httpx 비동기 클라이언트**: Bearer 토큰 인증 기반 HTTPS 통신
+- **3단계 Fallback 체인**: Balanced -> Low-cost -> Free 모델 자동 전환
+  - Primary: `google/gemini-2.0-flash-001` (Balanced)
+  - Fallback 1: `qwen/qwen2.5-vl-32b-instruct` (Low-cost)
+  - Fallback 2: `google/gemini-2.0-flash-exp:free` (Free)
+- **지수 백오프 재시도**: 1s -> 2s -> 4s + 랜덤 Jitter (0-500ms)
+- **비용 모니터링**: 일일 $1 / 월간 $30 예산 제한 및 추적
+- **캐시 통합**: 성공 응답 7일 TTL 캐싱 (Redis/Memory)
+
+### v5.0 환경 변수
+
+#### 필수 환경 변수
 
 | 변수명 | 필수 | 기본값 | 설명 |
 |--------|------|--------|------|
 | `OPENROUTER_API_KEY` | Yes | - | OpenRouter API 키 |
+
+#### 인프라 설정 (SPEC-INFRA-001)
+
+| 변수명 | 필수 | 기본값 | 설명 |
+|--------|------|--------|------|
 | `REDIS_URL` | No | `redis://localhost:6379/0` | Redis 연결 URL |
 | `APP_ENV` | No | `development` | 실행 환경 |
-| `VISION_PRIMARY_MODEL` | No | `google/gemini-2.0-flash-001` | 기본 Vision 모델 |
-| `VISION_FALLBACK_MODEL` | No | `openai/gpt-4o-mini` | Fallback Vision 모델 |
 | `CACHE_TTL_SECONDS` | No | `86400` | 캐시 TTL (초) |
 | `LOG_LEVEL` | No | `INFO` | 로그 레벨 |
+
+#### API 클라이언트 설정 (SPEC-API-001)
+
+| 변수명 | 필수 | 기본값 | 설명 |
+|--------|------|--------|------|
+| `VISION_PRIMARY_MODEL` | No | `google/gemini-2.0-flash-001` | Primary Vision 모델 (Balanced) |
+| `VISION_FALLBACK_MODEL` | No | `qwen/qwen2.5-vl-32b-instruct` | Fallback 1 Vision 모델 (Low-cost) |
+| `VISION_FREE_MODEL` | No | `google/gemini-2.0-flash-exp:free` | Fallback 2 Vision 모델 (Free) |
+| `API_DAILY_BUDGET` | No | `1.00` | 일일 API 예산 (USD) |
+| `API_MONTHLY_BUDGET` | No | `30.00` | 월간 API 예산 (USD) |
+| `API_CONNECT_TIMEOUT` | No | `5` | API 연결 타임아웃 (초) |
+| `API_READ_TIMEOUT` | No | `30` | API 읽기 타임아웃 (초) |
+| `API_MAX_RETRIES` | No | `3` | 최대 재시도 횟수 |
 
 ### v5.0 Quick Start
 

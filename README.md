@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-green)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-red)](https://fastapi.tiangolo.com/)
 [![MCP](https://img.shields.io/badge/MCP-Protocol-purple)](https://github.com/modelcontextprotocol)
-[![Version](https://img.shields.io/badge/Version-5.0.0-orange)](https://github.com/modelcontextprotocol)
+[![Version](https://img.shields.io/badge/Version-5.1.0-orange)](https://github.com/modelcontextprotocol)
 
 ## 📋 프로젝트 개요
 
@@ -38,18 +38,24 @@ Smart File Manager MCP는 Claude Desktop과 통합되는 고급 파일 관리 �
 
 ```
 smart-file-manager-mcp/
-├── src/smart_file_manager/      # v5.0 리팩토링 모듈
+├── src/smart_file_manager/      # v5.0+ 리팩토링 모듈
 │   ├── core/                    # 핵심 설정 및 예외
 │   │   ├── config.py            # Settings (pydantic-settings)
-│   │   └── exceptions.py        # 커스텀 예외 클래스
+│   │   ├── exceptions.py        # 커스텀 예외 클래스
+│   │   └── constants.py         # 상수 정의
 │   ├── infrastructure/          # 인프라 계층
 │   │   └── cache/               # 캐시 시스템
 │   │       ├── base.py          # CacheInterface (추상 클래스)
 │   │       ├── memory_cache.py  # MemoryCache
 │   │       └── redis_cache.py   # RedisCache
-│   └── services/                # 서비스 계층
-│       ├── openrouter_client.py # OpenRouter API 클라이언트
-│       └── model_config.py      # 모델 티어 및 Fallback 설정
+│   ├── services/                # 서비스 계층
+│   │   ├── openrouter_client.py # OpenRouter API 클라이언트
+│   │   ├── model_config.py      # 모델 티어 및 Fallback 설정
+│   │   └── vision_service.py    # 통합 Vision 분석 서비스
+│   └── processors/              # 프로세서 계층 (NEW: SPEC-VISION-001)
+│       ├── base_processor.py    # 추상 기반 클래스
+│       ├── image_processor.py   # 이미지 분석 프로세서
+│       └── video_processor.py   # 비디오 분석 프로세서
 ├── ai-services/                 # Legacy AI 서비스 모듈
 │   ├── multimedia_api_v4.py     # 멀티미디어 API 서버
 │   ├── enhanced_indexer_v4.py   # 파일 인덱싱 엔진
@@ -135,6 +141,53 @@ src/smart_file_manager/
 - **지수 백오프 재시도**: 1s -> 2s -> 4s + 랜덤 Jitter (0-500ms)
 - **비용 모니터링**: 일일 $1 / 월간 $30 예산 제한 및 추적
 - **캐시 통합**: 성공 응답 7일 TTL 캐싱 (Redis/Memory)
+
+### Phase 3: Vision 분석 서비스 (SPEC-VISION-001) - 완료
+
+**Vision 서비스 아키텍처**:
+```
+src/smart_file_manager/
+├── services/
+│   └── vision_service.py       # 통합 Vision 분석 서비스
+└── processors/
+    ├── base_processor.py       # 추상 기반 클래스
+    ├── image_processor.py      # 이미지 분석 (OpenRouter API)
+    └── video_processor.py      # 비디오 분석 (FFmpeg + 키프레임)
+```
+
+**Vision 서비스 Fallback 체인**:
+```
+                    ┌─────────────────────────────────────────────────┐
+                    │              Vision Analysis Service            │
+                    │                (SPEC-VISION-001)                │
+                    └─────────────────────────────────────────────────┘
+                                         │
+                    ┌────────────────────┼────────────────────┐
+                    │                    │                    │
+                    ▼                    ▼                    ▼
+            ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+            │   Primary    │    │  Fallback 1  │    │  Fallback 2  │
+            │   Vision     │───▶│   Vision     │───▶│    Vision    │
+            │ Gemini Flash │    │  Qwen 2.5 VL │    │  Gemini Free │
+            └──────────────┘    └──────────────┘    └──────────────┘
+                    │                    │                    │
+                    └────────────────────┼────────────────────┘
+                                         │
+                                         ▼
+                              ┌──────────────────┐
+                              │  Local Fallback  │
+                              │ (메타데이터 분석) │
+                              └──────────────────┘
+```
+
+**핵심 기능**:
+- **VisionService**: 이미지/비디오 통합 분석 서비스
+- **ImageProcessor**: scene description, object detection, OCR 텍스트 추출
+- **VideoProcessor**: FFmpeg 키프레임 추출, 대표 프레임 분석 (최대 5개)
+- **4단계 Fallback**: Primary -> Low-cost -> Free -> Local 메타데이터
+- **캐시 통합**: 콘텐츠 해시 기반 7일 TTL 캐싱
+- **비용 최적화**: 일일 $1 예산 초과 시 Free 티어 자동 전환
+- **테스트 커버리지**: 90.59% (327 테스트 통과)
 
 ### v5.0 환경 변수
 

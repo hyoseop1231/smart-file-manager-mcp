@@ -95,4 +95,4 @@ def get_settings() -> Settings:
     Returns:
         Settings: The application settings.
     """
-    return Settings()
+    return Settings()  # type: ignore[call-arg]

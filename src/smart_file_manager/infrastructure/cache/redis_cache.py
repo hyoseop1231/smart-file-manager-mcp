@@ -56,13 +56,13 @@ class RedisCache(CacheInterface):
             CacheConnectionError: If connection fails.
         """
         try:
-            self._client = redis.from_url(
+            self._client = redis.from_url(  # type: ignore[no-untyped-call]
                 self.redis_url,
                 encoding="utf-8",
                 decode_responses=True,
             )
             # Test connection with ping
-            await self._client.ping()
+            await self._client.ping()  # type: ignore[misc]
             self._is_connected = True
         except Exception as e:
             self._is_connected = False
@@ -154,7 +154,7 @@ class RedisCache(CacheInterface):
             return False
 
         try:
-            await self._client.ping()
+            await self._client.ping()  # type: ignore[misc]
             return True
         except Exception:
             return False

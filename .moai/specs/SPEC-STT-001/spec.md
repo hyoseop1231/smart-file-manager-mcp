@@ -1,7 +1,7 @@
 ---
 id: SPEC-STT-001
 version: "1.0.0"
-status: "draft"
+status: "completed"
 created: "2026-01-10"
 updated: "2026-01-10"
 author: "Developer"
@@ -19,6 +19,7 @@ dependencies:
 | 버전 | 날짜 | 작성자 | 변경사항 |
 |------|------|--------|----------|
 | 1.0.0 | 2026-01-10 | Developer | 초기 SPEC 작성 |
+| 1.0.1 | 2026-01-10 | Developer | TDD 구현 완료 (69 tests, TRUST 5 검증) |
 
 ---
 

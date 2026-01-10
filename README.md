@@ -6,7 +6,8 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-green)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-red)](https://fastapi.tiangolo.com/)
 [![MCP](https://img.shields.io/badge/MCP-Protocol-purple)](https://github.com/modelcontextprotocol)
-[![Version](https://img.shields.io/badge/Version-5.1.0-orange)](https://github.com/modelcontextprotocol)
+[![Version](https://img.shields.io/badge/Version-5.2.0-orange)](https://github.com/modelcontextprotocol)
+[![Tests](https://img.shields.io/badge/Tests-520%20passed-success)](https://github.com/modelcontextprotocol)
 
 ## 📋 프로젝트 개요
 
@@ -51,7 +52,9 @@ smart-file-manager-mcp/
 │   ├── services/                # 서비스 계층
 │   │   ├── openrouter_client.py # OpenRouter API 클라이언트
 │   │   ├── model_config.py      # 모델 티어 및 Fallback 설정
-│   │   └── vision_service.py    # 통합 Vision 분석 서비스
+│   │   ├── vision_service.py    # 통합 Vision 분석 서비스
+│   │   ├── stt_models.py        # STT 데이터 모델 (NEW: SPEC-STT-001)
+│   │   └── stt_service.py       # STT 서비스 (Faster-Whisper)
 │   ├── processors/              # 프로세서 계층 (SPEC-VISION-001)
 │   │   ├── base_processor.py    # 추상 기반 클래스
 │   │   ├── image_processor.py   # 이미지 분석 프로세서
@@ -248,6 +251,64 @@ src/smart_file_manager/
 - **BatchClassifier**: 비동기 배치 분류 (동시성 제한: 10)
 - **테스트 커버리지**: 89.41% (451 테스트 통과)
 
+### Phase 5: STT 서비스 (SPEC-STT-001) - 완료
+
+**STT 서비스 아키텍처**:
+```
+src/smart_file_manager/
+└── services/
+    ├── stt_models.py            # STT 데이터 모델
+    └── stt_service.py           # STT 서비스 (Faster-Whisper)
+```
+
+**STT 서비스 다이어그램**:
+```
+                    ┌─────────────────────────────────────────────────┐
+                    │               STT Service                       │
+                    │              (SPEC-STT-001)                     │
+                    └─────────────────────────────────────────────────┘
+                                         │
+                    ┌────────────────────┼────────────────────┐
+                    │                    │                    │
+                    ▼                    ▼                    ▼
+            ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+            │  Lazy Model  │    │    Device    │    │    Cache     │
+            │   Loading    │    │  Detection   │    │ Integration  │
+            │ 지연 초기화   │    │ CUDA/CPU 감지│    │ Redis/Memory │
+            └──────────────┘    └──────────────┘    └──────────────┘
+                    │                    │                    │
+                    └────────────────────┼────────────────────┘
+                                         │
+                    ┌────────────────────┼────────────────────┐
+                    │                    │                    │
+                    ▼                    ▼                    ▼
+            ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+            │   Whisper    │    │    Batch     │    │   Stats &    │
+            │   Models     │    │  Processing  │    │  Monitoring  │
+            │ large-v3 기본│    │ 동시성 제어  │    │ 실시간 통계  │
+            └──────────────┘    └──────────────┘    └──────────────┘
+```
+
+**핵심 기능**:
+- **STTService**: Faster-Whisper 기반 음성-텍스트 변환 서비스
+- **지연 로딩**: 첫 요청 시 Whisper 모델 로딩 (메모리 최적화)
+- **디바이스 자동 감지**: CUDA/CPU 자동 선택 및 compute_type 최적화
+  - CUDA: `float16` (GPU 최적)
+  - CPU: `int8` (메모리 효율)
+- **지원 포맷**: MP3, WAV, FLAC, OGG, M4A, WMA, WEBM
+- **타임스탬프**: 단어/세그먼트 단위 타임스탬프 생성
+- **배치 처리**: 비동기 배치 분석 (동시성 제한: 3)
+- **캐시 통합**: 콘텐츠 해시 기반 7일 TTL 캐싱
+- **통계 추적**: 분석 횟수, RTF, 캐시 히트율
+- **테스트 커버리지**: 90%+ (69 테스트 통과)
+
+**데이터 모델**:
+- **AudioMetadata**: 오디오 메타데이터 (duration, sample_rate, channels, codec)
+- **WordTimestamp**: 단어별 타임스탬프 (word, start, end, probability)
+- **TranscriptionSegment**: 세그먼트별 전사 결과 (text, confidence, words)
+- **TranscriptionResult**: 전체 전사 결과 (transcription, segments, language)
+- **STTStats**: 서비스 통계 (analyses, cache_hits, total_audio_seconds)
+
 ### v5.0 환경 변수
 
 #### 필수 환경 변수
@@ -277,6 +338,17 @@ src/smart_file_manager/
 | `API_CONNECT_TIMEOUT` | No | `5` | API 연결 타임아웃 (초) |
 | `API_READ_TIMEOUT` | No | `30` | API 읽기 타임아웃 (초) |
 | `API_MAX_RETRIES` | No | `3` | 최대 재시도 횟수 |
+
+#### STT 서비스 설정 (SPEC-STT-001)
+
+| 변수명 | 필수 | 기본값 | 설명 |
+|--------|------|--------|------|
+| `STT_MODEL_SIZE` | No | `large-v3` | Whisper 모델 크기 (tiny/base/small/medium/large-v3) |
+| `STT_DEVICE` | No | `auto` | 추론 디바이스 (auto/cuda/cpu) |
+| `STT_COMPUTE_TYPE` | No | `auto` | 연산 타입 (auto/float16/int8) |
+| `STT_DEFAULT_LANGUAGE` | No | `None` | 기본 언어 (None=자동 감지) |
+| `STT_CHUNK_LENGTH_SECONDS` | No | `30` | 청크 길이 (초) |
+| `STT_ENABLE_VAD` | No | `true` | VAD(음성 활동 감지) 활성화 |
 
 ### v5.0 Quick Start
 

@@ -1,0 +1,7 @@
+# Git workflow configuration
+git_strategy:
+  mode: auto
+  workflow: github-flow
+  main_branch: main
+  auto_commit: true
+  auto_push: false

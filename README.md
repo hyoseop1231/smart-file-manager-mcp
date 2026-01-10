@@ -52,10 +52,17 @@ smart-file-manager-mcp/
 │   │   ├── openrouter_client.py # OpenRouter API 클라이언트
 │   │   ├── model_config.py      # 모델 티어 및 Fallback 설정
 │   │   └── vision_service.py    # 통합 Vision 분석 서비스
-│   └── processors/              # 프로세서 계층 (NEW: SPEC-VISION-001)
-│       ├── base_processor.py    # 추상 기반 클래스
-│       ├── image_processor.py   # 이미지 분석 프로세서
-│       └── video_processor.py   # 비디오 분석 프로세서
+│   ├── processors/              # 프로세서 계층 (SPEC-VISION-001)
+│   │   ├── base_processor.py    # 추상 기반 클래스
+│   │   ├── image_processor.py   # 이미지 분석 프로세서
+│   │   └── video_processor.py   # 비디오 분석 프로세서
+│   └── classification/          # 분류 서비스 (NEW: SPEC-CLASS-001)
+│       ├── models.py            # 분류 데이터 모델
+│       ├── category_registry.py # 카테고리 레지스트리
+│       ├── tag_generator.py     # 태그 생성기 (한/영)
+│       ├── engine.py            # 하이브리드 분류 엔진
+│       ├── organization_planner.py # 파일 정리 플래너
+│       └── classification_service.py # 통합 분류 서비스
 ├── ai-services/                 # Legacy AI 서비스 모듈
 │   ├── multimedia_api_v4.py     # 멀티미디어 API 서버
 │   ├── enhanced_indexer_v4.py   # 파일 인덱싱 엔진
@@ -188,6 +195,58 @@ src/smart_file_manager/
 - **캐시 통합**: 콘텐츠 해시 기반 7일 TTL 캐싱
 - **비용 최적화**: 일일 $1 예산 초과 시 Free 티어 자동 전환
 - **테스트 커버리지**: 90.59% (327 테스트 통과)
+
+### Phase 4: 파일 분류 서비스 (SPEC-CLASS-001) - 완료
+
+**Classification 서비스 아키텍처**:
+```
+src/smart_file_manager/
+└── classification/
+    ├── models.py               # 분류 데이터 모델
+    ├── category_registry.py    # 카테고리 레지스트리
+    ├── tag_generator.py        # 태그 생성기 (한/영)
+    ├── engine.py               # 하이브리드 분류 엔진
+    ├── organization_planner.py # 파일 정리 플래너
+    └── classification_service.py # 통합 분류 서비스
+```
+
+**Classification 서비스 다이어그램**:
+```
+                    ┌─────────────────────────────────────────────────┐
+                    │           Classification Service                │
+                    │               (SPEC-CLASS-001)                  │
+                    └─────────────────────────────────────────────────┘
+                                         │
+                    ┌────────────────────┼────────────────────┐
+                    │                    │                    │
+                    ▼                    ▼                    ▼
+            ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+            │  User Rules  │    │ AI Analysis  │    │  Metadata    │
+            │  (Priority)  │───▶│ (VisionSvc)  │───▶│   Rules      │
+            │  사용자 규칙  │    │ AI 분석 연동 │    │ 메타데이터   │
+            └──────────────┘    └──────────────┘    └──────────────┘
+                    │                    │                    │
+                    └────────────────────┼────────────────────┘
+                                         │
+                    ┌────────────────────┼────────────────────┐
+                    │                    │                    │
+                    ▼                    ▼                    ▼
+            ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+            │   Category   │    │     Tag      │    │ Organization │
+            │   Registry   │    │  Generator   │    │   Planner    │
+            │ 8개 기본 분류 │    │ 한/영 이중화 │    │ 날짜 기반정리│
+            └──────────────┘    └──────────────┘    └──────────────┘
+```
+
+**핵심 기능**:
+- **ClassificationService**: 통합 분류 서비스 (VisionService 연동)
+- **ClassificationEngine**: 하이브리드 분류 (사용자규칙 > AI > 메타데이터)
+- **CategoryRegistry**: 8개 기본 카테고리 + 커스텀 카테고리
+  - `photo`, `screenshot`, `document`, `artwork`, `meme`, `product`, `video`, `other`
+- **TagGenerator**: 한/영 이중 언어 태그 생성 (150+ 번역)
+- **OrganizationPlanner**: 날짜 기반 파일 정리 추천
+- **BatchClassifier**: 비동기 배치 분류 (동시성 제한: 10)
+- **테스트 커버리지**: 89.41% (451 테스트 통과)
 
 ### v5.0 환경 변수
 

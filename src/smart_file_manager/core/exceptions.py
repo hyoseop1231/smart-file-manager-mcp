@@ -648,3 +648,195 @@ class FileTooLargeError(STTError):
         self.file_size_bytes = file_size_bytes
         self.max_size_bytes = max_size_bytes
         super().__init__(message)
+
+
+# =============================================================================
+# Organization Exception Classes (TAG: ORG-001, SPEC-ORG-001)
+# =============================================================================
+
+
+class OrganizationError(SmartFileManagerError):
+    """Base exception for file organization errors.
+
+    This exception is raised when there is a general organization error.
+    All organization-specific exceptions should inherit from this class.
+    """
+
+    def __init__(self, message: str = "Organization error occurred") -> None:
+        """Initialize the exception with a message.
+
+        Args:
+            message: The error message describing the organization issue.
+        """
+        super().__init__(message)
+
+
+class SafetyValidationError(OrganizationError):
+    """Exception raised when safety validation fails.
+
+    This exception is raised when a safety check fails, such as
+    attempting to modify protected paths, insufficient disk space,
+    or missing permissions.
+    """
+
+    def __init__(
+        self,
+        message: str = "Safety validation failed",
+        validation_type: str | None = None,
+        details: str | None = None,
+    ) -> None:
+        """Initialize the exception with validation information.
+
+        Args:
+            message: The error message describing the validation failure.
+            validation_type: Type of validation that failed
+                (protected_path, disk_space, permissions).
+            details: Additional details about the failure.
+        """
+        self.validation_type = validation_type
+        self.details = details
+        super().__init__(message)
+
+
+class ConflictError(OrganizationError):
+    """Exception raised when a file conflict cannot be resolved.
+
+    This exception is raised when a target file already exists
+    and the conflict strategy cannot resolve it automatically.
+    """
+
+    def __init__(
+        self,
+        message: str = "File conflict could not be resolved",
+        source_path: str | None = None,
+        target_path: str | None = None,
+    ) -> None:
+        """Initialize the exception with conflict information.
+
+        Args:
+            message: The error message describing the conflict.
+            source_path: Path of the source file.
+            target_path: Path of the target file.
+        """
+        self.source_path = source_path
+        self.target_path = target_path
+        super().__init__(message)
+
+
+class TransactionError(OrganizationError):
+    """Exception raised when a transaction fails.
+
+    This exception is raised when a file organization transaction
+    cannot be completed or saved.
+    """
+
+    def __init__(
+        self,
+        message: str = "Transaction failed",
+        transaction_id: str | None = None,
+    ) -> None:
+        """Initialize the exception with transaction information.
+
+        Args:
+            message: The error message describing the transaction failure.
+            transaction_id: The ID of the failed transaction.
+        """
+        self.transaction_id = transaction_id
+        super().__init__(message)
+
+
+class RollbackError(OrganizationError):
+    """Exception raised when a rollback operation fails.
+
+    This exception is raised when attempting to roll back
+    a file organization transaction fails.
+    """
+
+    def __init__(
+        self,
+        message: str = "Rollback failed",
+        transaction_id: str | None = None,
+        partial_rollback: bool = False,
+    ) -> None:
+        """Initialize the exception with rollback information.
+
+        Args:
+            message: The error message describing the rollback failure.
+            transaction_id: The ID of the transaction being rolled back.
+            partial_rollback: Whether the rollback was partially completed.
+        """
+        self.transaction_id = transaction_id
+        self.partial_rollback = partial_rollback
+        super().__init__(message)
+
+
+class ExecutionError(OrganizationError):
+    """Exception raised when file operation execution fails.
+
+    This exception is raised when a file operation (move, copy, delete)
+    fails during execution.
+    """
+
+    def __init__(
+        self,
+        message: str = "File operation failed",
+        operation: str | None = None,
+        file_path: str | None = None,
+    ) -> None:
+        """Initialize the exception with execution information.
+
+        Args:
+            message: The error message describing the execution failure.
+            operation: The operation that failed (move, copy, delete).
+            file_path: The path of the file that caused the failure.
+        """
+        self.operation = operation
+        self.file_path = file_path
+        super().__init__(message)
+
+
+class ProtectedPathError(OrganizationError):
+    """Exception raised when attempting to modify a protected path.
+
+    This exception is raised when an operation attempts to
+    modify files in a protected system directory.
+    """
+
+    def __init__(
+        self,
+        message: str = "Cannot modify protected path",
+        protected_path: str | None = None,
+    ) -> None:
+        """Initialize the exception with path information.
+
+        Args:
+            message: The error message describing the protection issue.
+            protected_path: The protected path that was accessed.
+        """
+        self.protected_path = protected_path
+        super().__init__(message)
+
+
+class InsufficientSpaceError(OrganizationError):
+    """Exception raised when there is not enough disk space.
+
+    This exception is raised when a file operation cannot be
+    completed due to insufficient disk space.
+    """
+
+    def __init__(
+        self,
+        message: str = "Insufficient disk space",
+        required_bytes: int | None = None,
+        available_bytes: int | None = None,
+    ) -> None:
+        """Initialize the exception with space information.
+
+        Args:
+            message: The error message describing the space issue.
+            required_bytes: The number of bytes required for the operation.
+            available_bytes: The number of bytes currently available.
+        """
+        self.required_bytes = required_bytes
+        self.available_bytes = available_bytes
+        super().__init__(message)

@@ -25,6 +25,12 @@ class Settings(BaseSettings):
         vision_fallback_model: Fallback model when primary fails.
         cache_ttl_seconds: Cache TTL in seconds (default: 24 hours).
         log_level: Logging level for the application.
+        stt_model_size: Whisper model size for STT.
+        stt_device: Device for STT inference (auto/cuda/cpu).
+        stt_compute_type: Compute type for STT (auto/float16/int8).
+        stt_default_language: Default language for STT (None for auto-detect).
+        stt_chunk_length_seconds: Chunk length for STT processing.
+        stt_enable_vad: Enable Voice Activity Detection for STT.
     """
 
     model_config = SettingsConfigDict(
@@ -72,6 +78,42 @@ class Settings(BaseSettings):
         description="Logging level",
     )
 
+    # ==========================================================================
+    # STT (Speech-to-Text) Configuration (TAG: STT-001, SPEC-STT-001)
+    # ==========================================================================
+
+    stt_model_size: str = Field(
+        default="large-v3",
+        description="Whisper model size (tiny, base, small, medium, large-v3)",
+    )
+
+    stt_device: str = Field(
+        default="auto",
+        description="Device for STT inference (auto, cuda, cpu)",
+    )
+
+    stt_compute_type: str = Field(
+        default="auto",
+        description="Compute type for STT (auto, float16, int8)",
+    )
+
+    stt_default_language: str | None = Field(
+        default=None,
+        description="Default language for STT (None for auto-detect)",
+    )
+
+    stt_chunk_length_seconds: int = Field(
+        default=30,
+        ge=1,
+        le=300,
+        description="Chunk length in seconds for STT processing",
+    )
+
+    stt_enable_vad: bool = Field(
+        default=True,
+        description="Enable Voice Activity Detection for STT",
+    )
+
     @field_validator("cache_ttl_seconds", mode="before")
     @classmethod
     def validate_cache_ttl(cls, v: int | str) -> int:
@@ -80,6 +122,14 @@ class Settings(BaseSettings):
             v = int(v)
         if v < 1:
             raise ValueError("cache_ttl_seconds must be a positive integer")
+        return v
+
+    @field_validator("log_level", mode="before")
+    @classmethod
+    def validate_log_level(cls, v: str) -> str:
+        """Validate and normalize log level to uppercase."""
+        if isinstance(v, str):
+            return v.upper()
         return v
 
     @property

@@ -483,3 +483,168 @@ class OrganizationPlanError(ClassificationError):
         """
         self.file_path = file_path
         super().__init__(message)
+
+
+# =============================================================================
+# STT Exception Classes (TAG: STT-001, SPEC-STT-001)
+# =============================================================================
+
+
+class STTError(SmartFileManagerError):
+    """Base exception for STT (Speech-to-Text) errors.
+
+    This exception is raised when there is a general STT error.
+    All STT-specific exceptions should inherit from this class.
+    """
+
+    def __init__(self, message: str = "STT error occurred") -> None:
+        """Initialize the exception with a message.
+
+        Args:
+            message: The error message describing the STT issue.
+        """
+        super().__init__(message)
+
+
+class UnsupportedAudioFormatError(STTError):
+    """Exception raised when audio format is not supported.
+
+    This exception is raised when the input audio file format is not
+    in the list of supported formats for STT processing.
+    """
+
+    def __init__(
+        self,
+        message: str = "Unsupported audio format",
+        format: str | None = None,
+        supported_formats: list[str] | None = None,
+    ) -> None:
+        """Initialize the exception with format information.
+
+        Args:
+            message: The error message describing the format issue.
+            format: The unsupported format that was encountered.
+            supported_formats: List of formats that are supported.
+        """
+        self.format = format
+        self.supported_formats = supported_formats or []
+        super().__init__(message)
+
+
+class AudioProcessingError(STTError):
+    """Exception raised when audio processing fails.
+
+    This exception is raised when an audio file cannot be processed
+    due to corruption, encoding issues, or other processing errors.
+    """
+
+    def __init__(
+        self,
+        message: str = "Audio processing error",
+        audio_path: str | None = None,
+    ) -> None:
+        """Initialize the exception with audio information.
+
+        Args:
+            message: The error message describing the processing issue.
+            audio_path: The path to the audio file that failed processing.
+        """
+        self.audio_path = audio_path
+        super().__init__(message)
+
+
+class ModelLoadError(STTError):
+    """Exception raised when STT model fails to load.
+
+    This exception is raised when the Faster-Whisper model
+    cannot be loaded due to missing files, memory issues, etc.
+    """
+
+    def __init__(
+        self,
+        message: str = "Failed to load STT model",
+        model_name: str | None = None,
+    ) -> None:
+        """Initialize the exception with model information.
+
+        Args:
+            message: The error message describing the load failure.
+            model_name: The name of the model that failed to load.
+        """
+        self.model_name = model_name
+        super().__init__(message)
+
+
+class TranscriptionError(STTError):
+    """Exception raised when transcription fails.
+
+    This exception is raised when the STT transcription process
+    fails after the model has been loaded.
+    """
+
+    def __init__(
+        self,
+        message: str = "Transcription failed",
+        audio_path: str | None = None,
+        reason: str | None = None,
+    ) -> None:
+        """Initialize the exception with transcription failure information.
+
+        Args:
+            message: The error message describing the failure.
+            audio_path: The path to the audio file that failed transcription.
+            reason: The reason for the transcription failure.
+        """
+        self.audio_path = audio_path
+        self.reason = reason
+        super().__init__(message)
+
+
+class AudioTooLongError(STTError):
+    """Exception raised when audio exceeds maximum duration (REQ-N-001).
+
+    This exception is raised when the audio file duration exceeds
+    the configured maximum (default: 2 hours / 7200 seconds).
+    """
+
+    def __init__(
+        self,
+        message: str = "Audio file exceeds maximum duration",
+        duration_seconds: float | None = None,
+        max_duration_seconds: float | None = None,
+    ) -> None:
+        """Initialize the exception with duration information.
+
+        Args:
+            message: The error message describing the duration issue.
+            duration_seconds: The actual duration of the audio file.
+            max_duration_seconds: The maximum allowed duration.
+        """
+        self.duration_seconds = duration_seconds
+        self.max_duration_seconds = max_duration_seconds
+        super().__init__(message)
+
+
+class FileTooLargeError(STTError):
+    """Exception raised when file size exceeds maximum limit (REQ-N-002).
+
+    This exception is raised when the audio file size exceeds
+    the configured maximum (default: 100MB).
+    """
+
+    def __init__(
+        self,
+        message: str = "File size exceeds maximum limit",
+        file_size_bytes: int | None = None,
+        max_size_bytes: int | None = None,
+    ) -> None:
+        """Initialize the exception with size information.
+
+        Args:
+            message: The error message describing the size issue.
+            file_size_bytes: The actual size of the file in bytes.
+            max_size_bytes: The maximum allowed size in bytes.
+        """
+        self.file_size_bytes = file_size_bytes
+        self.max_size_bytes = max_size_bytes
+        super().__init__(message)

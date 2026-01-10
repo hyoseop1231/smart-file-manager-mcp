@@ -1,9 +1,9 @@
-"""Constants for Smart File Manager Vision Analysis.
+"""Constants for Smart File Manager.
 
-TAG: VIS-M1-02
-SPEC: SPEC-VISION-001
+TAG: VIS-M1-02, STT-001
+SPEC: SPEC-VISION-001, SPEC-STT-001
 
-This module defines all constants used by the Vision analysis service,
+This module defines all constants used by the Vision analysis and STT services,
 including supported formats, size limits, cache settings, and prompts.
 """
 
@@ -141,3 +141,48 @@ VISION_FALLBACK_2_TIMEOUT: float = 60.0  # Free tier may be slower
 
 VISION_DAILY_BUDGET_USD: float = 1.00
 VISION_MONTHLY_BUDGET_USD: float = 30.00
+
+# =============================================================================
+# STT (Speech-to-Text) Constants (TAG: STT-001, SPEC-STT-001)
+# =============================================================================
+
+# Supported audio formats for STT processing (REQ-U-001)
+SUPPORTED_AUDIO_FORMATS: frozenset[str] = frozenset(
+    {
+        "mp3",
+        "wav",
+        "flac",
+        "aac",
+        "ogg",
+        "m4a",
+        "opus",
+        "wma",
+    }
+)
+
+# Audio MIME type mappings
+AUDIO_MIME_TYPES: dict[str, str] = {
+    "mp3": "audio/mpeg",
+    "wav": "audio/wav",
+    "flac": "audio/flac",
+    "aac": "audio/aac",
+    "ogg": "audio/ogg",
+    "m4a": "audio/mp4",
+    "opus": "audio/opus",
+    "wma": "audio/x-ms-wma",
+}
+
+# STT Cache settings
+STT_CACHE_PREFIX: str = "stt"
+STT_CACHE_TTL_SECONDS: int = 7 * 24 * 60 * 60  # 7 days
+
+# STT Size and Duration limits (REQ-N-001, REQ-N-002)
+STT_MAX_DURATION_SECONDS: int = 2 * 60 * 60  # 2 hours (7200 seconds)
+STT_MAX_FILE_SIZE_BYTES: int = 100 * 1024 * 1024  # 100MB
+
+# STT Model configuration
+STT_DEFAULT_MODEL_SIZE: str = "large-v3"
+STT_DEFAULT_DEVICE: str = "auto"
+STT_DEFAULT_COMPUTE_TYPE: str = "auto"
+STT_DEFAULT_BATCH_SIZE: int = 16
+STT_CHUNK_LENGTH_SECONDS: int = 30

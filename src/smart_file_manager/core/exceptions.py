@@ -372,3 +372,114 @@ class AnalysisFailedError(VisionError):
         self.attempts = attempts
         self.last_error = last_error
         super().__init__(message)
+
+
+# =============================================================================
+# Classification Exception Classes (TAG: CLASS-001, SPEC-CLASS-001)
+# =============================================================================
+
+
+class ClassificationError(SmartFileManagerError):
+    """Base exception for classification-related errors.
+
+    This exception is raised when there is a general classification error.
+    All classification-specific exceptions should inherit from this class.
+    """
+
+    def __init__(self, message: str = "Classification error") -> None:
+        """Initialize the exception with a message.
+
+        Args:
+            message: The error message describing the classification issue.
+        """
+        super().__init__(message)
+
+
+class CategoryNotFoundError(ClassificationError):
+    """Exception raised when a category is not found.
+
+    This exception is raised when the requested category does not exist
+    in the CategoryRegistry.
+    """
+
+    def __init__(
+        self,
+        message: str = "Category not found",
+        category_id: str | None = None,
+    ) -> None:
+        """Initialize the exception with category information.
+
+        Args:
+            message: The error message describing the issue.
+            category_id: The identifier of the category that was not found.
+        """
+        self.category_id = category_id
+        if category_id:
+            message = f"Category not found: {category_id}"
+        super().__init__(message)
+
+
+class InvalidCategoryNameError(ClassificationError):
+    """Exception raised when a category name is invalid.
+
+    This exception is raised when the category name contains invalid
+    characters or violates naming rules.
+    """
+
+    def __init__(
+        self,
+        message: str = "Invalid category name",
+        category_id: str | None = None,
+    ) -> None:
+        """Initialize the exception with category information.
+
+        Args:
+            message: The error message describing the issue.
+            category_id: The invalid category identifier.
+        """
+        self.category_id = category_id
+        super().__init__(message)
+
+
+class ClassificationFailedError(ClassificationError):
+    """Exception raised when classification fails.
+
+    This exception is raised when file classification fails
+    after trying all available methods.
+    """
+
+    def __init__(
+        self,
+        message: str = "Classification failed",
+        file_path: str | None = None,
+    ) -> None:
+        """Initialize the exception with file information.
+
+        Args:
+            message: The error message describing the failure.
+            file_path: The path to the file that failed classification.
+        """
+        self.file_path = file_path
+        super().__init__(message)
+
+
+class OrganizationPlanError(ClassificationError):
+    """Exception raised when organization plan generation fails.
+
+    This exception is raised when the system cannot generate
+    a valid organization plan for a file.
+    """
+
+    def __init__(
+        self,
+        message: str = "Organization plan generation failed",
+        file_path: str | None = None,
+    ) -> None:
+        """Initialize the exception with file information.
+
+        Args:
+            message: The error message describing the failure.
+            file_path: The path to the file that failed plan generation.
+        """
+        self.file_path = file_path
+        super().__init__(message)

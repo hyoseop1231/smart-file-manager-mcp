@@ -6,8 +6,8 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-green)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-red)](https://fastapi.tiangolo.com/)
 [![MCP](https://img.shields.io/badge/MCP-Protocol-purple)](https://github.com/modelcontextprotocol)
-[![Version](https://img.shields.io/badge/Version-5.2.0-orange)](https://github.com/modelcontextprotocol)
-[![Tests](https://img.shields.io/badge/Tests-520%20passed-success)](https://github.com/modelcontextprotocol)
+[![Version](https://img.shields.io/badge/Version-5.3.0-orange)](https://github.com/modelcontextprotocol)
+[![Tests](https://img.shields.io/badge/Tests-731%20passed-success)](https://github.com/modelcontextprotocol)
 
 ## 📋 프로젝트 개요
 
@@ -59,13 +59,21 @@ smart-file-manager-mcp/
 │   │   ├── base_processor.py    # 추상 기반 클래스
 │   │   ├── image_processor.py   # 이미지 분석 프로세서
 │   │   └── video_processor.py   # 비디오 분석 프로세서
-│   └── classification/          # 분류 서비스 (NEW: SPEC-CLASS-001)
-│       ├── models.py            # 분류 데이터 모델
-│       ├── category_registry.py # 카테고리 레지스트리
-│       ├── tag_generator.py     # 태그 생성기 (한/영)
-│       ├── engine.py            # 하이브리드 분류 엔진
-│       ├── organization_planner.py # 파일 정리 플래너
-│       └── classification_service.py # 통합 분류 서비스
+│   ├── classification/          # 분류 서비스 (SPEC-CLASS-001)
+│   │   ├── models.py            # 분류 데이터 모델
+│   │   ├── category_registry.py # 카테고리 레지스트리
+│   │   ├── tag_generator.py     # 태그 생성기 (한/영)
+│   │   ├── engine.py            # 하이브리드 분류 엔진
+│   │   ├── organization_planner.py # 파일 정리 플래너
+│   │   └── classification_service.py # 통합 분류 서비스
+│   └── organization/            # 파일 정리 서비스 (NEW: SPEC-ORG-001)
+│       ├── organization_service.py  # 통합 정리 실행 서비스
+│       ├── organization_executor.py # 파일 작업 실행 엔진
+│       ├── safety_validator.py      # 안전성 검증
+│       ├── conflict_resolver.py     # 충돌 해결
+│       ├── transaction_manager.py   # 트랜잭션 관리
+│       ├── progress_tracker.py      # 진행 추적
+│       └── models.py                # 데이터 모델
 ├── ai-services/                 # Legacy AI 서비스 모듈
 │   ├── multimedia_api_v4.py     # 멀티미디어 API 서버
 │   ├── enhanced_indexer_v4.py   # 파일 인덱싱 엔진
@@ -308,6 +316,72 @@ src/smart_file_manager/
 - **TranscriptionSegment**: 세그먼트별 전사 결과 (text, confidence, words)
 - **TranscriptionResult**: 전체 전사 결과 (transcription, segments, language)
 - **STTStats**: 서비스 통계 (analyses, cache_hits, total_audio_seconds)
+
+### Phase 6: 파일 정리 서비스 (SPEC-ORG-001) - 완료
+
+**Organization 서비스 아키텍처**:
+```
+src/smart_file_manager/
+└── organization/
+    ├── organization_service.py     # 통합 정리 실행 서비스
+    ├── organization_executor.py    # 파일 작업 실행 엔진
+    ├── safety_validator.py         # 안전성 검증
+    ├── conflict_resolver.py        # 충돌 해결
+    ├── transaction_manager.py      # 트랜잭션 관리
+    ├── progress_tracker.py         # 진행 추적
+    └── models.py                   # 데이터 모델
+```
+
+**Organization 서비스 다이어그램**:
+```
+                    ┌─────────────────────────────────────────────────┐
+                    │            Organization Service                 │
+                    │               (SPEC-ORG-001)                    │
+                    └─────────────────────────────────────────────────┘
+                                         │
+                    ┌────────────────────┼────────────────────┐
+                    │                    │                    │
+                    ▼                    ▼                    ▼
+            ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+            │    Safety    │    │   Conflict   │    │ Transaction  │
+            │   Validator  │    │   Resolver   │    │   Manager    │
+            │ 보호경로 검증 │    │ 충돌 해결    │    │ 롤백 지원    │
+            └──────────────┘    └──────────────┘    └──────────────┘
+                    │                    │                    │
+                    └────────────────────┼────────────────────┘
+                                         │
+                    ┌────────────────────┼────────────────────┐
+                    │                    │                    │
+                    ▼                    ▼                    ▼
+            ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+            │ Organization │    │   Progress   │    │    Trash     │
+            │   Executor   │    │   Tracker    │    │  Management  │
+            │ 파일 작업 실행│    │ ETA 계산     │    │ 안전 삭제    │
+            └──────────────┘    └──────────────┘    └──────────────┘
+```
+
+**핵심 기능**:
+- **OrganizationService**: 통합 정리 실행 서비스 (ClassificationService 연동)
+- **OrganizationExecutor**: 파일 move/copy/rename/delete/group 실행
+- **SafetyValidator**: 보호 경로 차단, 디스크 공간 검증, 파일 잠금 확인
+- **ConflictResolver**: 4가지 충돌 해결 전략
+  - `skip`: 충돌 시 건너뛰기 (기본값)
+  - `overwrite`: 기존 파일 덮어쓰기
+  - `rename_suffix`: 파일명에 접미사 추가 (_1, _2)
+  - `ask_user`: 사용자에게 선택 요청
+- **TransactionManager**: 롤백 지원 트랜잭션 관리, 크래시 복구
+- **ProgressTracker**: 실시간 진행률, ETA 계산, 콜백 지원
+- **휴지통 관리**: 안전 삭제 (30일 보관), 메타데이터 저장
+- **배치 처리**: 비동기 배치 실행 (동시성 제한: 5)
+- **dry-run 모드**: 실행 전 검증 (실제 파일 작업 없음)
+- **테스트 커버리지**: 95%+ (211 테스트 추가, 총 731 테스트 통과)
+
+**데이터 모델**:
+- **OrganizationPlan**: 정리 계획 (action, source, target, conflict_strategy)
+- **ExecutionResult**: 실행 결과 (success, transaction_id, error_message)
+- **ValidationResult**: dry-run 검증 결과 (valid, conflicts, errors)
+- **Progress**: 진행 상황 (percentage, current_file, eta_seconds)
+- **RollbackResult**: 롤백 결과 (success, restored_files, failed_restorations)
 
 ### v5.0 환경 변수
 

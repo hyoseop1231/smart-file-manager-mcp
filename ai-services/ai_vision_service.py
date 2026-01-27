@@ -9,6 +9,7 @@ import logging
 import hashlib
 import json
 from pathlib import Path
+import httpx
 from typing import Dict, Any, Tuple, List, Optional
 from PIL import Image
 
@@ -59,6 +60,9 @@ class AIVisionService:
             self._init_blip_model()
         else:
             self.logger.info("AI models skipped - torch not available")
+        
+        # Ollama works without torch
+        self._init_ollama_vision()
         
         # Analysis categories
         self.image_categories = [
@@ -128,6 +132,51 @@ class AIVisionService:
         except Exception as e:
             self.logger.warning(f"⚠️ BLIP initialization failed: {e}")
     
+
+    def _init_ollama_vision(self):
+        """Check Ollama Vision availability"""
+        try:
+            resp = httpx.get("http://localhost:11434/api/tags", timeout=5)
+            if resp.status_code == 200:
+                models = resp.json().get("models", [])
+                vision_models = [m["name"] for m in models if "vl" in m["name"].lower() or "vision" in m["name"].lower()]
+                if vision_models:
+                    self.models['ollama'] = {
+                        'model': vision_models[0],
+                        'type': 'vision',
+                        'capabilities': ['image_description', 'ocr']
+                    }
+                    self.logger.info(f"✅ Ollama Vision available ({vision_models[0]})")
+                    return True
+        except Exception as e:
+            self.logger.warning(f"⚠️ Ollama Vision not available: {e}")
+        return False
+
+    def analyze_with_ollama(self, image_path: str, prompt: str = "Describe this image in detail.") -> str:
+        """Analyze image using Ollama Vision model"""
+        import base64
+        
+        if 'ollama' not in self.models:
+            if not self._init_ollama_vision():
+                return "Ollama Vision not available"
+        
+        try:
+            with open(image_path, 'rb') as f:
+                img_base64 = base64.b64encode(f.read()).decode()
+            
+            model = self.models['ollama']['model']
+            resp = httpx.post(
+                "http://localhost:11434/api/generate",
+                json={"model": model, "prompt": prompt, "images": [img_base64], "stream": False},
+                timeout=120
+            )
+            
+            if resp.status_code == 200:
+                return resp.json().get("response", "No response")
+            return f"Error: {resp.status_code}"
+        except Exception as e:
+            return f"Ollama error: {e}"
+
     def analyze_image(self, image_path: str) -> Tuple[str, float, Dict[str, Any]]:
         """
         Comprehensive image analysis
@@ -136,8 +185,18 @@ class AIVisionService:
             tuple: (description, confidence, analysis_data)
         """
         if not TORCH_AVAILABLE:
-            return "AI vision analysis not available (torch not installed)", 0.0, {
-                "error": "torch_not_available",
+            # Try Ollama instead
+            if 'ollama' in self.models:
+                try:
+                    description = self.analyze_with_ollama(image_path)
+                    return description, 0.8, {
+                        "model": "ollama",
+                        "ollama_model": self.models['ollama']['model']
+                    }
+                except Exception as e:
+                    self.logger.warning(f"Ollama analysis failed: {e}")
+            return "AI vision analysis not available", 0.0, {
+                "error": "no_vision_backend",
                 "fallback": "basic_analysis"
             }
         

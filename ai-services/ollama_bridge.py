@@ -14,7 +14,7 @@ class OllamaService:
         self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         self.models = {
             "text": "qwen3:30b-a3b",  # 텍스트 분석용 (qwen2.5 대체)
-            "vision": "llava:13b",  # 이미지 분석 전용 모델
+            "vision": "qwen2.5vl:7b",  # 이미지 분석 전용 모델
             "embedding": "nomic-embed-text"  # 임베딩 전용 모델
         }
         

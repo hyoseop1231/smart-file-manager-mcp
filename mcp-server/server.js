@@ -6,6 +6,7 @@
  */
 
 const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
+const { ListToolsRequestSchema, CallToolRequestSchema, ListResourcesRequestSchema } = require("@modelcontextprotocol/sdk/types");
 const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
 const axios = require('axios');
 const fs = require('fs-extra');
@@ -40,7 +41,7 @@ const apiClient = axios.create({
 });
 
 // 도구 목록 정의
-server.setRequestHandler('tools/list', async () => {
+server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
@@ -134,7 +135,7 @@ server.setRequestHandler('tools/list', async () => {
 });
 
 // 도구 호출 핸들러
-server.setRequestHandler('tools/call', async (request) => {
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
   try {
@@ -409,7 +410,7 @@ async function handleCleanupDisk(args) {
 }
 
 // 리소스 목록 핸들러
-server.setRequestHandler('resources/list', async () => {
+server.setRequestHandler(ListResourcesRequestSchema, async () => {
   return {
     resources: [
       {

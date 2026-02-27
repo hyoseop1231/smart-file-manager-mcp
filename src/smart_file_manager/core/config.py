@@ -7,7 +7,7 @@ Environment variables are loaded and validated at startup.
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Valid log levels
@@ -19,10 +19,15 @@ class Settings(BaseSettings):
 
     Attributes:
         app_env: Application environment (development, staging, production).
-        openrouter_api_key: OpenRouter API key for AI services (required).
+        ollama_base_url: Primary Ollama server URL.
+        ollama_fallback_url: Fallback Ollama server URL.
+        ollama_vision_model: Vision model for image/video analysis.
+        ollama_text_model: Text model for classification and generation.
+        ollama_fast_model: Fast model for quick responses.
+        ollama_connect_timeout: Connection timeout in seconds.
+        ollama_read_timeout: Read timeout in seconds.
+        ollama_total_timeout: Total request timeout in seconds.
         redis_url: Redis connection URL for caching.
-        vision_primary_model: Primary vision model for image/video analysis.
-        vision_fallback_model: Fallback model when primary fails.
         cache_ttl_seconds: Cache TTL in seconds (default: 24 hours).
         log_level: Logging level for the application.
         stt_model_size: Whisper model size for STT.
@@ -43,10 +48,59 @@ class Settings(BaseSettings):
     # Application environment
     app_env: str = Field(default="development", description="Application environment")
 
-    # OpenRouter API (Required)
-    openrouter_api_key: SecretStr = Field(
-        ...,
-        description="OpenRouter API key for AI services",
+    # ==========================================================================
+    # Ollama Configuration
+    # ==========================================================================
+
+    ollama_base_url: str = Field(
+        default="http://192.168.0.106:11434",
+        description="Primary Ollama server URL",
+    )
+
+    ollama_fallback_url: str | None = Field(
+        default="http://192.168.0.107:11434",
+        description="Fallback Ollama server URL",
+    )
+
+    # Ollama model configuration
+    ollama_vision_model: str = Field(
+        default="qwen2.5vl:7b",
+        description="Vision model for image/video analysis",
+    )
+
+    ollama_text_model: str = Field(
+        default="glm-4.7-flash",
+        description="Text model for classification and generation",
+    )
+
+    ollama_fast_model: str = Field(
+        default="qwen2.5:7b",
+        description="Fast model for quick responses",
+    )
+
+    # Ollama timeout configuration
+    ollama_connect_timeout: float = Field(
+        default=10.0,
+        ge=1.0,
+        description="Connection timeout in seconds",
+    )
+
+    ollama_read_timeout: float = Field(
+        default=120.0,
+        ge=10.0,
+        description="Read timeout in seconds",
+    )
+
+    ollama_total_timeout: float = Field(
+        default=180.0,
+        ge=30.0,
+        description="Total request timeout in seconds",
+    )
+
+    # Legacy: OpenRouter API key (optional, for backward compatibility)
+    openrouter_api_key: str | None = Field(
+        default=None,
+        description="OpenRouter API key (deprecated, use Ollama instead)",
     )
 
     # Redis configuration
@@ -55,14 +109,14 @@ class Settings(BaseSettings):
         description="Redis connection URL",
     )
 
-    # Vision model configuration
+    # Vision model configuration (legacy, mapped to Ollama)
     vision_primary_model: str = Field(
-        default="google/gemini-2.0-flash-001",
-        description="Primary vision model",
+        default="qwen2.5vl:7b",
+        description="Primary vision model (use ollama_vision_model)",
     )
     vision_fallback_model: str = Field(
-        default="openai/gpt-4o-mini",
-        description="Fallback vision model",
+        default="qwen2.5vl:7b",
+        description="Fallback vision model (use ollama_vision_model)",
     )
 
     # Cache configuration
@@ -145,4 +199,4 @@ def get_settings() -> Settings:
     Returns:
         Settings: The application settings.
     """
-    return Settings()  # type: ignore[call-arg]
+    return Settings()

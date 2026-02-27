@@ -188,35 +188,30 @@ class ImageProcessor:
         self,
         image_data: bytes,
         mime_type: str,
-    ) -> list[dict[str, Any]]:
-        """Prepare message with base64 encoded image for API.
+    ) -> tuple[list[dict[str, Any]], list[str]]:
+        """Prepare message with base64 encoded image for Ollama API.
 
         Args:
             image_data: Raw image bytes.
-            mime_type: MIME type of the image.
+            mime_type: MIME type of the image (not used for Ollama, but kept for compatibility).
 
         Returns:
-            List of message dictionaries for the API.
+            Tuple of (messages list, images list) for the Ollama API.
+            - messages: List of message dictionaries with 'role' and 'content'.
+            - images: List of base64 encoded image strings.
         """
         base64_image = base64.b64encode(image_data).decode("utf-8")
 
-        return [
+        # Ollama format: images are passed separately as base64 strings
+        messages = [
             {
                 "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": IMAGE_ANALYSIS_PROMPT,
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:{mime_type};base64,{base64_image}",
-                        },
-                    },
-                ],
+                "content": IMAGE_ANALYSIS_PROMPT,
             }
         ]
+        images = [base64_image]
+
+        return messages, images
 
     def _parse_api_response(
         self,
@@ -379,12 +374,12 @@ class ImageProcessor:
         # Determine MIME type
         mime_type = IMAGE_MIME_TYPES.get(metadata.format, "image/jpeg")
 
-        # Prepare message for API
-        messages = self._prepare_image_message(image_data, mime_type)
+        # Prepare message for Ollama API
+        messages, images = self._prepare_image_message(image_data, mime_type)
 
         try:
-            # Call API with fallback chain
-            response = await self.client.chat_completion_with_fallback(messages)
+            # Call API with fallback chain (pass images separately for Ollama)
+            response = await self.client.chat_completion_with_fallback(messages, images=images)
 
             processing_time_ms = (time.time() - start_time) * 1000
 

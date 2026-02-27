@@ -22,8 +22,11 @@ COPY requirements_multimedia.txt .
 RUN pip install --no-cache-dir -r requirements_multimedia.txt
 
 # 추가 AI/ML 라이브러리 설치
+# torch 계열은 PyTorch CPU index에서, 나머지는 기본 PyPI에서 설치한다.
 RUN pip install --no-cache-dir \
-    torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu \
+    torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+RUN pip install --no-cache-dir \
     transformers \
     sentence-transformers \
     pillow \

@@ -7,8 +7,6 @@ import os
 import time
 import schedule
 import logging
-import asyncio
-import threading
 from datetime import datetime
 from enhanced_indexer_v4 import EnhancedFileIndexer as FileIndexer
 from db_manager import DatabaseManager
@@ -35,6 +33,11 @@ class SmartFileScheduler:
         # Initialize components
         self.file_indexer = FileIndexer(self.db_path, self.embeddings_path, self.metadata_path)
         self.db_manager = DatabaseManager(self.db_path)
+        index_dirs_env = os.environ.get("INDEX_DIRECTORIES", "").strip()
+        if index_dirs_env:
+            self.index_directories = [x.strip() for x in index_dirs_env.split(",") if x.strip()]
+        else:
+            self.index_directories = list(getattr(self.file_indexer, "indexed_dirs", []) or [])
         
         # Track indexing state
         self.is_indexing = False
@@ -55,10 +58,12 @@ class SmartFileScheduler:
         logger.info("🔄 Starting full indexing...")
         self.is_indexing = True
         start_time = time.time()
-        
+
         try:
-            # Run indexing
-            self.file_indexer.run_indexing()
+            if not self.index_directories:
+                logger.warning("No indexed directories configured")
+            for directory in self.index_directories:
+                self.file_indexer.index_directory(directory)
             
             # Log statistics
             stats = self.file_indexer.get_stats()
@@ -117,11 +122,8 @@ class SmartFileScheduler:
         """Run database cleanup and optimization"""
         logger.info("🧹 Starting database cleanup...")
         start_time = time.time()
-        
+
         try:
-            # Clean expired cache entries
-            self.file_indexer.clean_cache()
-            
             # Run basic SQLite optimization
             import sqlite3
             conn = sqlite3.connect(self.db_path)

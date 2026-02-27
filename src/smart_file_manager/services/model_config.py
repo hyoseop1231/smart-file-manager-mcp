@@ -1,8 +1,7 @@
-"""Model configuration for OpenRouter API.
+"""Model configuration for Ollama API.
 
-TAG-002: SPEC-API-001
 This module defines model tiers and fallback chain configuration
-for the OpenRouter vision API integration.
+for the Ollama vision API integration.
 """
 
 from dataclasses import dataclass
@@ -10,14 +9,15 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class ModelTier:
-    """Represents a model tier with pricing information.
+    """Represents a model tier.
 
     Attributes:
-        name: The tier name (e.g., 'free', 'balanced', 'premium').
-        model_id: The OpenRouter model identifier.
-        input_cost_per_million: Cost per million input tokens in USD.
-        output_cost_per_million: Cost per million output tokens in USD.
+        name: The tier name (e.g., 'vision', 'balanced', 'fast').
+        model_id: The Ollama model identifier.
+        input_cost_per_million: Cost per million input tokens (0 for local).
+        output_cost_per_million: Cost per million output tokens (0 for local).
         description: Optional description of the model tier.
+        is_vision: Whether the model supports vision/image analysis.
     """
 
     name: str
@@ -25,46 +25,52 @@ class ModelTier:
     input_cost_per_million: float
     output_cost_per_million: float
     description: str | None = None
+    is_vision: bool = False
 
 
 # =============================================================================
-# Predefined Model Tiers
+# Ollama Model Tiers (Local - No API costs)
 # =============================================================================
 
-FREE_TIER = ModelTier(
-    name="free",
-    model_id="google/gemini-2.0-flash-exp:free",
+# Vision model for image analysis
+VISION_TIER = ModelTier(
+    name="vision",
+    model_id="qwen2.5vl:7b",
     input_cost_per_million=0.0,
     output_cost_per_million=0.0,
-    description="Free tier with Gemini 2.0 Flash experimental model",
+    description="Qwen2.5-VL 7B vision model for image analysis",
+    is_vision=True,
 )
 
-LOW_COST_TIER = ModelTier(
-    name="low_cost",
-    model_id="qwen/qwen2.5-vl-32b-instruct",
-    input_cost_per_million=0.05,
-    output_cost_per_million=0.05,
-    description="Low-cost tier with Qwen 2.5 VL model",
-)
-
-BALANCED_TIER = ModelTier(
-    name="balanced",
-    model_id="google/gemini-2.0-flash-001",
-    input_cost_per_million=0.10,
-    output_cost_per_million=0.40,
-    description="Balanced tier with Gemini 2.0 Flash model",
-)
-
+# High quality text model
 PREMIUM_TIER = ModelTier(
     name="premium",
-    model_id="openai/gpt-4o-mini",
-    input_cost_per_million=0.15,
-    output_cost_per_million=0.60,
-    description="Premium tier with GPT-4o Mini model",
+    model_id="glm-4.7-flash",
+    input_cost_per_million=0.0,
+    output_cost_per_million=0.0,
+    description="GLM-4.7-Flash 29.9B for high-quality text generation",
 )
 
-# Ordered list of all tiers from highest cost to lowest
-ALL_TIERS: list[ModelTier] = [PREMIUM_TIER, BALANCED_TIER, LOW_COST_TIER, FREE_TIER]
+# Balanced/default text model
+BALANCED_TIER = ModelTier(
+    name="balanced",
+    model_id="qwen2.5:7b",
+    input_cost_per_million=0.0,
+    output_cost_per_million=0.0,
+    description="Qwen2.5 7B for balanced text generation",
+)
+
+# Fast/lightweight model
+FAST_TIER = ModelTier(
+    name="fast",
+    model_id="qwen2.5:7b",
+    input_cost_per_million=0.0,
+    output_cost_per_million=0.0,
+    description="Qwen2.5 7B for fast responses",
+)
+
+# Ordered list of all text tiers from highest quality to fastest
+ALL_TIERS: list[ModelTier] = [PREMIUM_TIER, BALANCED_TIER, FAST_TIER]
 
 
 class ModelConfig:
@@ -74,46 +80,65 @@ class ModelConfig:
     to get fallback chains for graceful degradation when models fail.
     """
 
-    def __init__(self, primary_tier: ModelTier = BALANCED_TIER) -> None:
-        """Initialize ModelConfig with a primary tier.
+    def __init__(
+        self,
+        primary_tier: ModelTier = BALANCED_TIER,
+        vision_tier: ModelTier = VISION_TIER,
+    ) -> None:
+        """Initialize ModelConfig with primary and vision tiers.
 
         Args:
-            primary_tier: The primary model tier to use. Defaults to BALANCED_TIER.
+            primary_tier: The primary text model tier. Defaults to BALANCED_TIER.
+            vision_tier: The vision model tier. Defaults to VISION_TIER.
         """
         self._primary_tier = primary_tier
+        self._vision_tier = vision_tier
         self._tier_by_name: dict[str, ModelTier] = {tier.name: tier for tier in ALL_TIERS}
+        self._tier_by_name["vision"] = VISION_TIER
         self._tier_by_model_id: dict[str, ModelTier] = {tier.model_id: tier for tier in ALL_TIERS}
+        self._tier_by_model_id[VISION_TIER.model_id] = VISION_TIER
 
     @property
     def primary_tier(self) -> ModelTier:
-        """Get the primary model tier."""
+        """Get the primary model tier for text generation."""
         return self._primary_tier
+
+    @property
+    def vision_tier(self) -> ModelTier:
+        """Get the vision model tier for image analysis."""
+        return self._vision_tier
 
     def get_fallback_chain(self) -> list[ModelTier]:
         """Get the fallback chain starting from the primary tier.
 
-        The fallback chain includes the primary tier and all lower-cost tiers,
-        ending with the free tier. This ensures graceful degradation when
-        higher-tier models fail or are unavailable.
+        The fallback chain includes the primary tier and all lower tiers.
+        This ensures graceful degradation when higher-tier models fail.
 
         Returns:
             A list of ModelTier objects in fallback order.
         """
-        # Find the index of the primary tier in the ordered list
         try:
             primary_index = ALL_TIERS.index(self._primary_tier)
         except ValueError:
-            # If primary tier is not in the list, start from balanced
             primary_index = ALL_TIERS.index(BALANCED_TIER)
 
-        # Return all tiers from primary to free (inclusive)
         return ALL_TIERS[primary_index:]
+
+    def get_vision_fallback_chain(self) -> list[ModelTier]:
+        """Get the fallback chain for vision models.
+
+        Currently only one vision model, but can be extended.
+
+        Returns:
+            A list of vision ModelTier objects in fallback order.
+        """
+        return [self._vision_tier]
 
     def get_tier_by_name(self, name: str) -> ModelTier | None:
         """Get a model tier by its name.
 
         Args:
-            name: The tier name (e.g., 'free', 'balanced', 'premium').
+            name: The tier name (e.g., 'vision', 'balanced', 'premium').
 
         Returns:
             The ModelTier if found, None otherwise.
@@ -124,9 +149,14 @@ class ModelConfig:
         """Get a model tier by its model ID.
 
         Args:
-            model_id: The OpenRouter model identifier.
+            model_id: The Ollama model identifier.
 
         Returns:
             The ModelTier if found, None otherwise.
         """
         return self._tier_by_model_id.get(model_id)
+
+
+# Legacy aliases for backward compatibility
+FREE_TIER = FAST_TIER
+LOW_COST_TIER = BALANCED_TIER

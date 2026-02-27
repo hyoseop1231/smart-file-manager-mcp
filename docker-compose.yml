@@ -14,7 +14,10 @@ services:
       - ${WATCH_DIRECTORIES:-./watch_directories}:/watch_directories:ro
     environment:
       - PYTHONUNBUFFERED=1
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://192.168.0.106:11434}
+      - OLLAMA_FALLBACK_URL=${OLLAMA_FALLBACK_URL:-http://192.168.0.107:11434}
+      - OLLAMA_VISION_MODEL=${OLLAMA_VISION_MODEL:-qwen2.5vl:7b}
+      - OLLAMA_TEXT_MODEL=${OLLAMA_TEXT_MODEL:-glm-4.7-flash}
       - DB_PATH=/data/db/file-index.db
       - EMBEDDINGS_PATH=/data/embeddings
       - METADATA_PATH=/data/metadata
@@ -80,8 +83,8 @@ services:
       - "3003:3000"
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
       - GF_INSTALL_PLUGINS=redis-datasource
@@ -134,6 +137,24 @@ services:
     networks:
       - smart-file-network
 
+  # Qdrant 벡터 데이터베이스 (선택적)
+  smart-file-qdrant-v4:
+    image: qdrant/qdrant:latest
+    container_name: smart-file-qdrant-v4
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "/bin/bash -c 'echo > /dev/tcp/localhost/6333' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - smart-file-network
 
 networks:
   smart-file-network:
@@ -141,7 +162,12 @@ networks:
 
 volumes:
   file-data:
+    driver: local
   redis-data:
+    driver: local
   prometheus-data:
+    driver: local
   grafana-data:
+    driver: local
   qdrant-data:
+    driver: local

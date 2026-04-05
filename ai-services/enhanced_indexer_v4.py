@@ -10,6 +10,7 @@ import sqlite3
 import hashlib
 import json
 import logging
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -58,8 +59,10 @@ class EnhancedFileIndexer:
         
         # Initialize content processors
         self.content_extractor = ContentExtractor()  # For text files
+        # Image descriptions are handled by the dedicated AI vision service below.
+        # Keep CLIP disabled here to avoid duplicate analysis and noisy startup warnings.
         self.multimedia_processor = MultimediaProcessor(
-            enable_ai_vision=enable_ai_vision,
+            enable_ai_vision=False,
             enable_stt=enable_stt,
             cache_dir=metadata_path
         )
@@ -86,15 +89,23 @@ class EnhancedFileIndexer:
         elif enable_stt and not STT_AVAILABLE:
             logger.warning("⚠️ Speech Recognition service not available (dependencies missing)")
         
-        # Get directories from environment or use defaults
-        self.indexed_dirs = [
-            os.environ.get("HOME_DOCUMENTS", "/watch_directories/Documents"),
-            os.environ.get("HOME_DOWNLOADS", "/watch_directories/Downloads"), 
-            os.environ.get("HOME_DESKTOP", "/watch_directories/Desktop"),
-            os.environ.get("HOME_PICTURES", "/watch_directories/Pictures"),
-            os.environ.get("HOME_MOVIES", "/watch_directories/Movies"),
-            os.environ.get("HOME_MUSIC", "/watch_directories/Music")
-        ]
+        # Prefer explicit multi-root indexing config when present.
+        index_dirs_env = os.environ.get("INDEX_DIRECTORIES", "").strip()
+        if index_dirs_env:
+            self.indexed_dirs = [
+                directory.strip()
+                for directory in index_dirs_env.split(",")
+                if directory.strip()
+            ]
+        else:
+            self.indexed_dirs = [
+                os.environ.get("HOME_DOCUMENTS", "/watch_directories/Documents"),
+                os.environ.get("HOME_DOWNLOADS", "/watch_directories/Downloads"),
+                os.environ.get("HOME_DESKTOP", "/watch_directories/Desktop"),
+                os.environ.get("HOME_PICTURES", "/watch_directories/Pictures"),
+                os.environ.get("HOME_MOVIES", "/watch_directories/Movies"),
+                os.environ.get("HOME_MUSIC", "/watch_directories/Music"),
+            ]
         
         # Initialize directories
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
@@ -108,16 +119,17 @@ class EnhancedFileIndexer:
         self.file_categories = {
             # Text/Document files - use content_extractor
             'text': ['.txt', '.md', '.csv', '.json', '.xml', '.log', '.py', '.js', '.java', 
-                    '.cpp', '.c', '.go', '.php', '.rb', '.sh', '.sql', '.html', '.css', 
+                    '.cpp', '.c', '.go', '.php', '.rb', '.sh', '.sql', '.html', '.css',
+                    '.ts', '.tsx', '.jsx', '.mjs', '.cjs',
                     '.yml', '.yaml', '.toml', '.ini', '.conf', '.config'],
-            'document': ['.pdf', '.doc', '.docx'],
+            'document': ['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx'],
             'korean_document': ['.hwp', '.hwpx'],
             
             # Multimedia files - use multimedia_processor
             'image': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp', 
                      '.tiff', '.tga', '.ico', '.heic', '.heif'],
-            'video': ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', 
-                     '.m4v', '.3gp', '.ogv', '.mpg', '.mpeg', '.ts', '.mts'],
+            'video': ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm',
+                     '.m4v', '.3gp', '.ogv', '.mpg', '.mpeg', '.mts'],
             'audio': ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.wma', '.m4a', 
                      '.opus', '.aiff', '.au', '.ra', '.amr', '.3ga'],
             
@@ -251,6 +263,11 @@ class EnhancedFileIndexer:
             tuple: (category, media_type)
         """
         extension = file_path.suffix.lower()
+
+        if extension == '.ts':
+            if self._looks_like_text(file_path):
+                return 'text', 'text'
+            return 'video', 'multimedia'
         
         for category, extensions in self.file_categories.items():
             if extension in extensions:
@@ -267,8 +284,32 @@ class EnhancedFileIndexer:
                 return category, media_type
         
         return 'other', 'other'
+
+    def _looks_like_text(self, file_path: Path, sample_size: int = 4096) -> bool:
+        """Best-effort disambiguation for extensions like `.ts`."""
+        try:
+            with open(file_path, 'rb') as handle:
+                sample = handle.read(sample_size)
+        except OSError:
+            return False
+
+        if not sample:
+            return True
+        if b'\x00' in sample:
+            return False
+
+        try:
+            decoded = sample.decode('utf-8')
+        except UnicodeDecodeError:
+            return False
+
+        printable = sum(
+            1 for char in decoded
+            if char.isprintable() or char in '\r\n\t'
+        )
+        return printable / max(len(decoded), 1) >= 0.85
     
-    def index_file(self, file_path: str) -> bool:
+    def index_file(self, file_path: str, force_reindex: bool = False) -> bool:
         """
         Index a single file with enhanced multimedia support
         """
@@ -299,7 +340,7 @@ class EnhancedFileIndexer:
             )
             existing = cursor.fetchone()
             
-            if existing and existing[0] == content_hash:
+            if not force_reindex and existing and existing[0] == content_hash:
                 # File unchanged, skip unless it needs AI analysis
                 last_analyzed = existing[1] or 0
                 needs_ai_analysis = (time.time() - last_analyzed) > 86400  # 24 hours
@@ -467,18 +508,30 @@ class EnhancedFileIndexer:
     def _extract_metadata(self, file_path: Path) -> Dict[str, Any]:
         """Extract basic file metadata"""
         stat = file_path.stat()
+        raw_path = str(file_path)
+        raw_name = file_path.name
+        raw_parent_dir = str(file_path.parent)
         
         metadata = {
-            "name": file_path.name,
+            "name": self._normalize_unicode(raw_name),
+            "raw_name": raw_name,
             "extension": file_path.suffix.lower(),
             "size": stat.st_size,
             "modified": stat.st_mtime,
             "created": stat.st_ctime,
-            "path": str(file_path),
-            "parent_dir": str(file_path.parent)
+            "path": raw_path,
+            "normalized_path": self._normalize_unicode(raw_path),
+            "parent_dir": raw_parent_dir,
+            "normalized_parent_dir": self._normalize_unicode(raw_parent_dir),
         }
         
         return metadata
+
+    def _normalize_unicode(self, value: str) -> str:
+        """Normalize user-facing strings to NFC while keeping raw paths separately."""
+        if not isinstance(value, str) or not value:
+            return value
+        return unicodedata.normalize("NFC", value)
     
     def _calculate_file_hash(self, file_path: str) -> str:
         """Calculate SHA256 hash of file content"""
@@ -528,28 +581,23 @@ class EnhancedFileIndexer:
         indexed_count = 0
         skipped_count = 0
         multimedia_count = 0
-        
+        processed_count = 0
+
         try:
-            # Count total files first for progress tracking
-            total_files = sum(1 for root, dirs, files in os.walk(directory) 
-                            for file_name in files 
-                            if self._should_index_file(Path(root) / file_name))
-            
-            logger.info(f"Found {total_files} files to process")
-            
             for root, dirs, files in os.walk(directory):
                 # Filter out hidden directories
                 dirs[:] = [d for d in dirs if not d.startswith('.')]
                 
                 for file_name in files:
                     file_path = Path(root) / file_name
+                    processed_count += 1
                     
                     if not self._should_index_file(file_path):
                         skipped_count += 1
                         continue
                     
                     try:
-                        success = self.index_file(str(file_path))
+                        success = self.index_file(str(file_path), force_reindex=force_reindex)
                         if success:
                             indexed_count += 1
                             
@@ -560,8 +608,13 @@ class EnhancedFileIndexer:
                             
                             # Progress logging
                             if indexed_count % 100 == 0:
-                                progress = (indexed_count / total_files) * 100
-                                logger.info(f"Progress: {indexed_count}/{total_files} ({progress:.1f}%) - {multimedia_count} multimedia files")
+                                logger.info(
+                                    "Progress: processed=%s indexed=%s multimedia=%s skipped=%s",
+                                    processed_count,
+                                    indexed_count,
+                                    multimedia_count,
+                                    skipped_count,
+                                )
                         else:
                             skipped_count += 1
                             
@@ -569,10 +622,18 @@ class EnhancedFileIndexer:
                         logger.error(f"Error indexing file {file_path}: {e}")
                         skipped_count += 1
             
-            logger.info(f"Indexing complete. Indexed: {indexed_count}, Multimedia: {multimedia_count}, Skipped: {skipped_count}")
+            logger.info(
+                "Indexing complete. Processed: %s, Indexed: %s, Multimedia: %s, Skipped: %s",
+                processed_count,
+                indexed_count,
+                multimedia_count,
+                skipped_count,
+            )
+            return indexed_count
             
         except Exception as e:
             logger.error(f"Directory indexing failed: {e}")
+            return indexed_count
     
     def get_stats(self) -> Dict[str, Any]:
         """Get comprehensive database statistics"""
@@ -614,6 +675,25 @@ class EnhancedFileIndexer:
                 stats["by_category"][category or "unknown"] = {
                     "count": count,
                     "size_gb": round((total_size or 0) / (1024**3), 2)
+                }
+
+            stats["by_index_directory"] = {}
+            for directory in self.indexed_dirs:
+                prefix = f"{directory.rstrip('/')}/%"
+                cursor.execute(
+                    """
+                    SELECT COUNT(*) as count, COALESCE(SUM(size), 0) as total_size
+                    FROM files
+                    WHERE path LIKE ?
+                    """,
+                    (prefix,),
+                )
+                count, total_size = cursor.fetchone()
+                label = Path(directory).name or directory
+                stats["by_index_directory"][label] = {
+                    "path": directory,
+                    "count": count or 0,
+                    "size_gb": round((total_size or 0) / (1024**3), 2),
                 }
             
             # Content extraction stats

@@ -138,6 +138,10 @@ class ImageProcessor:
                 exif_text = self._exif_to_text(exif_data)
                 if exif_text.strip():
                     combined_text.append(f"EXIF Data: {exif_text}")
+
+                metadata_text = self._image_metadata_to_text(img, exif_data)
+                if metadata_text.strip():
+                    combined_text.append(f"Image Info: {metadata_text}")
                 
                 final_text = "\n\n".join(combined_text)
                 
@@ -191,6 +195,21 @@ class ImageProcessor:
             self.logger.debug(f"EXIF extraction failed: {e}")
         
         return exif_data
+
+    def _image_metadata_to_text(self, img: Image.Image, exif_data: Dict[str, Any]) -> str:
+        """Convert structural image metadata into searchable text."""
+        parts = [
+            f"Format {img.format}" if img.format else "",
+            f"Mode {img.mode}" if img.mode else "",
+            f"Resolution {img.size[0]}x{img.size[1]}",
+        ]
+
+        if img.mode in ('RGBA', 'LA') or 'transparency' in img.info:
+            parts.append("Contains transparency")
+        if exif_data:
+            parts.append(f"EXIF tags {len(exif_data)}")
+
+        return ". ".join(part for part in parts if part).strip()
     
     def _convert_to_json_serializable(self, value):
         """Convert various data types to JSON-serializable format"""

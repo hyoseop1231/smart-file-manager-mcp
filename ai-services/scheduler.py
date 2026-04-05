@@ -7,6 +7,7 @@ import os
 import time
 import schedule
 import logging
+import sqlite3
 from datetime import datetime
 from enhanced_indexer_v4 import EnhancedFileIndexer as FileIndexer
 from db_manager import DatabaseManager
@@ -43,11 +44,64 @@ class SmartFileScheduler:
         self.is_indexing = False
         self.last_full_index = None
         self.last_quick_index = None
+        self._full_index_rotation = 0
         
         logger.info(f"Scheduler initialized with intervals:")
         logger.info(f"  Full indexing: {self.full_index_interval}s ({self.full_index_interval/3600:.1f}h)")
         logger.info(f"  Quick indexing: {self.quick_index_interval}s ({self.quick_index_interval/60:.1f}m)")
         logger.info(f"  Cleanup: {self.cleanup_interval}s ({self.cleanup_interval/3600:.1f}h)")
+
+    def _get_directory_index_counts(self):
+        """Return indexed file counts per configured directory."""
+        counts = {}
+        if not self.index_directories:
+            return counts
+
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            for directory in self.index_directories:
+                prefix = f"{directory.rstrip('/')}/%"
+                cursor.execute(
+                    "SELECT COUNT(*) FROM files WHERE path LIKE ?",
+                    (prefix,),
+                )
+                counts[directory] = int(cursor.fetchone()[0] or 0)
+        except Exception as e:
+            logger.warning("Failed to load directory index counts: %s", e)
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+        return counts
+
+    def _ordered_directories(self):
+        """Prioritize the least-indexed directory so smaller trees are not starved."""
+        directories = list(self.index_directories)
+        if not directories:
+            return []
+
+        counts = self._get_directory_index_counts()
+        if counts:
+            ordered = sorted(
+                directories,
+                key=lambda directory: (
+                    counts.get(directory, 0),
+                    directories.index(directory),
+                ),
+            )
+            logger.info(
+                "📚 Indexed counts by directory: %s",
+                {directory: counts.get(directory, 0) for directory in ordered},
+            )
+            return ordered
+
+        rotation = self._full_index_rotation % len(directories)
+        ordered = directories[rotation:] + directories[:rotation]
+        self._full_index_rotation += 1
+        return ordered
         
     def run_full_indexing(self):
         """Run full indexing of all directories"""
@@ -62,7 +116,9 @@ class SmartFileScheduler:
         try:
             if not self.index_directories:
                 logger.warning("No indexed directories configured")
-            for directory in self.index_directories:
+            ordered_directories = self._ordered_directories()
+            logger.info("📁 Full indexing order: %s", ordered_directories)
+            for directory in ordered_directories:
                 self.file_indexer.index_directory(directory)
             
             # Log statistics

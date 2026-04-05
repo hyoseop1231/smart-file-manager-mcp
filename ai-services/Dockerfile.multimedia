@@ -10,6 +10,9 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     libavcodec-extra \
     libreoffice \
+    tesseract-ocr \
+    tesseract-ocr-kor \
+    tesseract-ocr-eng \
     curl \
     supervisor \
     && rm -rf /var/lib/apt/lists/*

@@ -100,17 +100,25 @@ services:
       context: ./mcp-server
       dockerfile: Dockerfile
     container_name: smart-file-mcp-server-v4
+    ports:
+      - "${MCP_SERVER_PORT:-8767}:8767"
     volumes:
       - file-data:/data:ro
       - ${WATCH_DIRECTORIES:-./watch_directories}:/watch_directories:ro
     environment:
       - API_BASE_URL=http://smart-file-manager-multimedia-v4:8001
       - NODE_ENV=production
+      - MCP_SERVER_MODE=${MCP_SERVER_MODE:-sse}
+      - MCP_SERVER_HOST=0.0.0.0
+      - MCP_SERVER_PORT=8767
+      - MCP_SSE_PATH=${MCP_SSE_PATH:-/sse}
+      - MCP_MESSAGE_PATH=${MCP_MESSAGE_PATH:-/messages}
+    command: ["node", "server.mjs"]
     depends_on:
       - smart-file-manager-multimedia-v4
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "console.log('healthy')"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:8767/health"]
       interval: 30s
       timeout: 10s
       retries: 3

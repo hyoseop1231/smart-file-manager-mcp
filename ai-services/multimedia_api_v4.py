@@ -18,6 +18,7 @@ import json
 import logging
 import asyncio
 import sqlite3
+import unicodedata
 from pathlib import Path
 from datetime import datetime
 import tempfile
@@ -95,6 +96,72 @@ except Exception as e:
 
 # Background task management
 background_tasks_dict = {}
+
+
+def _parse_json_field(value: Any) -> dict[str, Any]:
+    """Safely parse JSON payloads stored as dict/string."""
+    if isinstance(value, dict):
+        return value
+    if not isinstance(value, str) or not value.strip():
+        return {}
+    try:
+        parsed = json.loads(value)
+        return parsed if isinstance(parsed, dict) else {}
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return {}
+
+
+def _to_iso_datetime(value: Any) -> str:
+    """Convert epoch/ISO-like values to ISO-8601 string."""
+    if value in (None, ""):
+        return ""
+    if isinstance(value, (int, float)):
+        try:
+            return datetime.fromtimestamp(float(value)).isoformat()
+        except (OSError, OverflowError, ValueError):
+            return ""
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return ""
+        try:
+            return datetime.fromtimestamp(float(stripped)).isoformat()
+        except (TypeError, ValueError, OSError, OverflowError):
+            return stripped
+    return ""
+
+
+def _to_nfc(value: Any) -> str:
+    """Normalize strings to NFC for display/search interoperability."""
+    if not isinstance(value, str) or not value:
+        return ""
+    return unicodedata.normalize("NFC", value)
+
+
+def _extract_ai_summary(ai_analysis: Any) -> tuple[str, list[str]]:
+    """Normalize AI analysis fields for downstream graph consumers."""
+    if isinstance(ai_analysis, dict):
+        description = str(ai_analysis.get("description") or "").strip()
+        tags = ai_analysis.get("tags") or []
+        if isinstance(tags, str):
+            tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
+        elif not isinstance(tags, list):
+            tags = []
+        return description, [str(tag).strip() for tag in tags if str(tag).strip()]
+
+    if isinstance(ai_analysis, str):
+        stripped = ai_analysis.strip()
+        if not stripped:
+            return "", []
+        try:
+            parsed = json.loads(stripped)
+            if isinstance(parsed, dict):
+                return _extract_ai_summary(parsed)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
+        return stripped, []
+
+    return "", []
 
 # Request models
 class MultimediaSearchRequest(BaseModel):
@@ -285,14 +352,31 @@ async def search_multimedia_content(request: MultimediaSearchRequest):
                     logger.debug(f"Failed to parse processing_status: {e}")
                     processing_status = {}
                 
+                metadata = _parse_json_field(row_dict.get('metadata_json'))
+                ai_description, ai_tags = _extract_ai_summary(row_dict.get('ai_analysis'))
+                raw_path = row_dict.get('path') or ""
+                raw_name = row_dict.get('name') or os.path.basename(raw_path)
+                normalized_path = metadata.get('normalized_path') or _to_nfc(raw_path)
+                normalized_name = metadata.get('name') or metadata.get('normalized_name') or _to_nfc(raw_name)
+                created_raw = metadata.get('created') or metadata.get('created_at')
+                modified_raw = row_dict.get('modified_time') or metadata.get('modified') or metadata.get('modified_at')
+
                 result = {
                     'id': row_dict.get('id'),
-                    'path': row_dict.get('path'),
-                    'name': row_dict.get('name'),
+                    'path': raw_path,
+                    'normalized_path': normalized_path,
+                    'name': normalized_name,
+                    'normalized_name': normalized_name,
+                    'extension': row_dict.get('extension'),
                     'size': row_dict.get('size', 0),
                     'modified_time': row_dict.get('modified_time', 0),
+                    'created_at': _to_iso_datetime(created_raw),
+                    'modified_at': _to_iso_datetime(modified_raw),
                     'media_type': row_dict.get('media_type'),
                     'category': row_dict.get('category'),
+                    'metadata': metadata,
+                    'ai_description': ai_description,
+                    'ai_tags': ai_tags,
                     'has_multimedia_content': bool(row_dict.get('multimedia_content')),
                     'has_ai_analysis': bool(row_dict.get('ai_analysis')),
                     'has_thumbnail': bool(row_dict.get('thumbnail_path')),

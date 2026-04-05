@@ -1,5 +1,8 @@
 #!/usr/bin/env node
+import { createServer } from "node:http";
+import { URL } from "node:url";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { ListToolsRequestSchema, CallToolRequestSchema, ListResourcesRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import axios from "axios";
@@ -8,6 +11,11 @@ import path from "path";
 
 const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:8001";
 const NAS_PATH = "/home/hyoseop1231/nas_khs";
+const MCP_SERVER_MODE = (process.env.MCP_SERVER_MODE || "stdio").toLowerCase();
+const MCP_SERVER_HOST = process.env.MCP_SERVER_HOST || "0.0.0.0";
+const MCP_SERVER_PORT = Number(process.env.MCP_SERVER_PORT || "8767");
+const MCP_SSE_PATH = process.env.MCP_SSE_PATH || "/sse";
+const MCP_MESSAGE_PATH = process.env.MCP_MESSAGE_PATH || "/messages";
 
 const server = new Server(
   { name: "smart-file-manager-mcp", version: "4.2.0" },
@@ -215,6 +223,118 @@ async function handleTool(name, args) {
 }
 
 server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: [] }));
-const transport = new StdioServerTransport();
-await server.connect(transport);
-console.error("Smart File Manager MCP v4.2.0 - All API features");
+
+async function runStdio() {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error("Smart File Manager MCP v4.2.0 (stdio)");
+}
+
+async function runSse() {
+  let sseTransport = null;
+  const hasLiveSseSession = () =>
+    Boolean(sseTransport && sseTransport._sseResponse && !sseTransport._sseResponse.destroyed);
+
+  const httpServer = createServer(async (req, res) => {
+    try {
+      if (!req.url) {
+        res.writeHead(400).end("Bad request");
+        return;
+      }
+
+      const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+
+      if (req.method === "GET" && url.pathname === "/health") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
+            status: "ok",
+            mode: "sse",
+            sse_path: MCP_SSE_PATH,
+            message_path: MCP_MESSAGE_PATH,
+            has_active_session: hasLiveSseSession(),
+            session_id: sseTransport?.sessionId || null
+          })
+        );
+        return;
+      }
+
+      if (req.method === "GET" && url.pathname === MCP_SSE_PATH) {
+        if (sseTransport) {
+          // Force-close any stale or prior client session before accepting a new one.
+          try {
+            if (hasLiveSseSession()) {
+              await sseTransport.close();
+            }
+          } catch (closeError) {
+            console.error("Failed to close previous SSE session:", closeError);
+          }
+          sseTransport = null;
+        }
+
+        sseTransport = new SSEServerTransport(MCP_MESSAGE_PATH, res);
+        sseTransport.onclose = () => {
+          sseTransport = null;
+        };
+        sseTransport.onerror = (err) => {
+          console.error("SSE transport error:", err);
+        };
+
+        await server.connect(sseTransport);
+        console.error(`Smart File Manager MCP v4.2.0 (sse) session=${sseTransport.sessionId}`);
+        return;
+      }
+
+      if (req.method === "POST" && url.pathname === MCP_MESSAGE_PATH) {
+        if (!sseTransport || !hasLiveSseSession()) {
+          sseTransport = null;
+          res.writeHead(503, { "Content-Type": "text/plain" });
+          res.end("SSE session not established");
+          return;
+        }
+
+        const sessionId = url.searchParams.get("sessionId");
+        if (!sessionId || sessionId !== sseTransport.sessionId) {
+          res.writeHead(400, { "Content-Type": "text/plain" });
+          res.end("Invalid or missing sessionId");
+          return;
+        }
+
+        try {
+          await sseTransport.handlePostMessage(req, res);
+        } catch (transportError) {
+          console.error("SSE post message failed:", transportError);
+          sseTransport = null;
+          if (!res.headersSent) {
+            res.writeHead(503, { "Content-Type": "text/plain" });
+          }
+          if (!res.writableEnded) {
+            res.end("SSE session not established");
+          }
+        }
+        return;
+      }
+
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Not found");
+    } catch (error) {
+      console.error("HTTP server error:", error);
+      if (!res.headersSent) {
+        res.writeHead(500, { "Content-Type": "text/plain" });
+      }
+      res.end("Internal server error");
+    }
+  });
+
+  httpServer.listen(MCP_SERVER_PORT, MCP_SERVER_HOST, () => {
+    console.error(
+      `Smart File Manager MCP v4.2.0 (sse) listening on http://${MCP_SERVER_HOST}:${MCP_SERVER_PORT}${MCP_SSE_PATH}`
+    );
+  });
+}
+
+if (MCP_SERVER_MODE === "sse") {
+  await runSse();
+} else {
+  await runStdio();
+}

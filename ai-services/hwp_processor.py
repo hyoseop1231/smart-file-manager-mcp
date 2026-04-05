@@ -5,6 +5,8 @@ Handles both legacy HWP (binary) and modern HWPX (XML-based) formats
 """
 
 import os
+import re
+import shutil
 import zipfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -15,10 +17,34 @@ import subprocess
 
 # Try to import pyhwp for HWP support
 try:
-    import pyhwp.hwp5 as hwp5
+    import hwp5  # pyhwp package exposes the `hwp5` module
     HWP_SUPPORT = True
 except ImportError:
-    HWP_SUPPORT = False
+    try:
+        import pyhwp.hwp5 as hwp5  # Fallback for older layouts
+        HWP_SUPPORT = True
+    except ImportError:
+        hwp5 = None
+        HWP_SUPPORT = False
+
+try:
+    import olefile
+    OLEFILE_SUPPORT = True
+except ImportError:
+    olefile = None
+    OLEFILE_SUPPORT = False
+
+HWP5TXT_PATH = shutil.which("hwp5txt")
+SUMMARY_STREAM = "\x05HwpSummaryInformation"
+SUMMARY_FIELD_MAP = {
+    2: "title",
+    3: "subject",
+    4: "author",
+    5: "keywords",
+    6: "comments",
+    8: "last_saved_by",
+    9: "revision",
+}
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +58,7 @@ class HWPProcessor:
         self.supported_extensions = ['.hwp', '.hwpx']
         
         # Log library availability
-        if not HWP_SUPPORT:
+        if not HWP_SUPPORT and not HWP5TXT_PATH:
             self.logger.warning("pyhwp library not available. HWP file processing will be limited.")
     
     def is_supported_file(self, file_path: str) -> bool:
@@ -74,62 +100,18 @@ class HWPProcessor:
     
     def _extract_hwp_text(self, file_path: str) -> Tuple[str, bool, Dict[str, Any]]:
         """Extract text from legacy HWP (binary) format"""
-        if not HWP_SUPPORT:
-            # Fallback: try LibreOffice conversion
-            return self._extract_via_libreoffice(file_path, 'hwp')
-        
-        try:
-            self.logger.info(f"Processing HWP file: {file_path}")
-            
-            # Open HWP file with pyhwp
-            hwp_file = hwp5.Hwp5File(file_path)
-            text_parts = []
-            metadata = {
-                "format": "hwp",
-                "processor": "pyhwp",
-                "sections": 0,
-                "paragraphs": 0
-            }
-            
-            # Extract text from all sections
-            sections = list(hwp_file.bodytext.section_list())
-            metadata["sections"] = len(sections)
-            
-            paragraph_count = 0
-            for section_idx, section in enumerate(sections):
-                try:
-                    paragraphs = list(section.paragraph_list())
-                    for para_idx, paragraph in enumerate(paragraphs):
-                        try:
-                            para_text = paragraph.get_text()
-                            if para_text and para_text.strip():
-                                text_parts.append(para_text.strip())
-                                paragraph_count += 1
-                        except Exception as e:
-                            self.logger.debug(f"Error extracting paragraph {para_idx} from section {section_idx}: {e}")
-                            continue
-                except Exception as e:
-                    self.logger.debug(f"Error processing section {section_idx}: {e}")
-                    continue
-            
-            metadata["paragraphs"] = paragraph_count
-            
-            # Combine all text
-            full_text = "\n".join(text_parts)
-            
-            if full_text.strip():
-                self.logger.info(f"✅ HWP text extraction successful: {len(full_text)} characters, {paragraph_count} paragraphs")
-                metadata["success"] = True
-                metadata["character_count"] = len(full_text)
-                return full_text, True, metadata
-            else:
-                self.logger.warning(f"⚠️ HWP file appears to be empty: {file_path}")
-                return "", False, {"error": "No text content found", **metadata}
-                
-        except Exception as e:
-            self.logger.error(f"❌ HWP processing failed with pyhwp: {e}")
-            # Fallback to LibreOffice
-            return self._extract_via_libreoffice(file_path, 'hwp')
+        summary_info = self._extract_hwp_summary_metadata(file_path)
+
+        if HWP5TXT_PATH:
+            text, success, metadata = self._extract_via_hwp5txt(file_path)
+            metadata = self._merge_summary_info(metadata, summary_info)
+            if success:
+                return text, True, metadata
+
+        # Fallback: try LibreOffice conversion
+        text, success, metadata = self._extract_via_libreoffice(file_path, 'hwp')
+        metadata = self._merge_summary_info(metadata, summary_info)
+        return text, success, metadata
     
     def _extract_hwpx_text(self, file_path: str) -> Tuple[str, bool, Dict[str, Any]]:
         """Extract text from modern HWPX (XML-based) format"""
@@ -254,6 +236,106 @@ class HWPProcessor:
         text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)
         
         return text.strip()
+
+    def _extract_via_hwp5txt(self, file_path: str) -> Tuple[str, bool, Dict[str, Any]]:
+        """Extract HWP text using the bundled hwp5txt CLI."""
+        if not HWP5TXT_PATH:
+            return "", False, {"error": "hwp5txt command not available", "format": "hwp"}
+
+        try:
+            self.logger.info(f"Processing HWP file via hwp5txt: {file_path}")
+            result = subprocess.run(
+                [HWP5TXT_PATH, file_path],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            text = self._clean_extracted_text(result.stdout)
+            warnings = self._extract_warning_lines(result.stderr)
+            metadata = {
+                "format": "hwp",
+                "processor": "hwp5txt",
+                "success": bool(text),
+                "character_count": len(text),
+            }
+            if warnings:
+                metadata["warnings"] = warnings
+
+            if text:
+                self.logger.info(f"✅ HWP text extraction successful via hwp5txt: {len(text)} characters")
+                return text, True, metadata
+
+            error = self._clean_extracted_text(result.stderr) or "No text content found"
+            self.logger.warning(f"⚠️ hwp5txt produced no text for {file_path}")
+            return "", False, {**metadata, "error": error}
+        except subprocess.TimeoutExpired:
+            self.logger.error("hwp5txt extraction timed out")
+            return "", False, {"error": "hwp5txt timed out", "format": "hwp", "processor": "hwp5txt"}
+        except FileNotFoundError:
+            return "", False, {"error": "hwp5txt command not found", "format": "hwp", "processor": "hwp5txt"}
+        except Exception as e:
+            self.logger.error(f"❌ HWP processing failed with hwp5txt: {e}")
+            return "", False, {"error": str(e), "format": "hwp", "processor": "hwp5txt"}
+
+    def _extract_hwp_summary_metadata(self, file_path: str) -> Dict[str, Any]:
+        """Extract summary info from the HWP OLE container when available."""
+        if not OLEFILE_SUPPORT:
+            return {}
+
+        try:
+            with olefile.OleFileIO(file_path) as ole:
+                if not ole.exists(SUMMARY_STREAM):
+                    return {}
+                properties = ole.getproperties(SUMMARY_STREAM)
+        except Exception as e:
+            self.logger.debug(f"HWP summary metadata extraction failed: {e}")
+            return {}
+
+        summary_info: Dict[str, Any] = {}
+        for prop_id, field_name in SUMMARY_FIELD_MAP.items():
+            value = properties.get(prop_id)
+            cleaned = self._normalize_summary_value(value)
+            if cleaned:
+                summary_info[field_name] = cleaned
+
+        if summary_info:
+            summary_info["processor"] = "ole_summary"
+        return summary_info
+
+    def _normalize_summary_value(self, value: Any) -> str:
+        if value in (None, ""):
+            return ""
+        if hasattr(value, "isoformat"):
+            try:
+                return value.isoformat()
+            except Exception:
+                pass
+        if isinstance(value, (int, float)):
+            return str(value)
+        text = str(value).replace("\x00", "")
+        text = text.split("\x1f", 1)[0]
+        text = re.sub(r"[\x00-\x1f\x7f-\x9f]+", " ", text)
+        return " ".join(text.split()).strip()
+
+    def _merge_summary_info(self, metadata: Dict[str, Any], summary_info: Dict[str, Any]) -> Dict[str, Any]:
+        merged = dict(metadata)
+        if summary_info:
+            merged["summary_info"] = summary_info
+            for key in ("title", "subject", "author", "keywords", "comments", "last_saved_by", "revision"):
+                value = summary_info.get(key)
+                if value and key not in merged:
+                    merged[key] = value
+        return merged
+
+    def _extract_warning_lines(self, stderr: str) -> list[str]:
+        if not stderr:
+            return []
+        warnings = []
+        for line in stderr.splitlines():
+            cleaned = self._clean_extracted_text(line)
+            if cleaned and cleaned not in warnings:
+                warnings.append(cleaned)
+        return warnings[:20]
     
     def _extract_via_libreoffice(self, file_path: str, file_type: str) -> Tuple[str, bool, Dict[str, Any]]:
         """
@@ -317,13 +399,22 @@ class HWPProcessor:
             'file_size': file_path.stat().st_size if file_path.exists() else 0,
             'supported': self.is_supported_file(str(file_path)),
             'hwp_lib_available': HWP_SUPPORT,
+            'hwp_cli_available': bool(HWP5TXT_PATH),
+            'ole_summary_available': OLEFILE_SUPPORT,
             'can_process': True
         }
         
         # Add capability assessment
         if info['file_type'] == 'hwp':
-            info['recommended_processor'] = 'pyhwp' if HWP_SUPPORT else 'libreoffice'
-            info['extraction_confidence'] = 'high' if HWP_SUPPORT else 'medium'
+            if HWP5TXT_PATH:
+                info['recommended_processor'] = 'hwp5txt'
+                info['extraction_confidence'] = 'high'
+            elif HWP_SUPPORT:
+                info['recommended_processor'] = 'pyhwp'
+                info['extraction_confidence'] = 'high'
+            else:
+                info['recommended_processor'] = 'libreoffice'
+                info['extraction_confidence'] = 'medium'
         elif info['file_type'] == 'hwpx':
             info['recommended_processor'] = 'xml_parser'
             info['extraction_confidence'] = 'high'

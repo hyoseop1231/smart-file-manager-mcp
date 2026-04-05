@@ -102,11 +102,13 @@ class MultimediaProcessor:
             '.mp4': 'video', '.avi': 'video', '.mkv': 'video', '.mov': 'video',
             '.wmv': 'video', '.flv': 'video', '.webm': 'video', '.m4v': 'video',
             '.3gp': 'video', '.ogv': 'video', '.mpg': 'video', '.mpeg': 'video',
+            '.ts': 'video', '.mts': 'video',
             
             # Audio
             '.mp3': 'audio', '.wav': 'audio', '.flac': 'audio', '.aac': 'audio',
             '.ogg': 'audio', '.wma': 'audio', '.m4a': 'audio', '.opus': 'audio',
-            '.aiff': 'audio', '.au': 'audio', '.ra': 'audio'
+            '.aiff': 'audio', '.au': 'audio', '.ra': 'audio', '.amr': 'audio',
+            '.3ga': 'audio'
         }
     
     def can_process(self, file_path: str) -> bool:

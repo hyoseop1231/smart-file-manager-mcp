@@ -6,6 +6,8 @@ Unified text extraction from various file formats including HWP/HWPX
 
 import os
 import logging
+import subprocess
+import tempfile
 from pathlib import Path
 from typing import Optional, Dict, Any, Tuple
 import mimetypes
@@ -32,6 +34,15 @@ class ContentExtractor:
             # Korean document formats
             '.hwp': self._extract_hwp,
             '.hwpx': self._extract_hwp,
+
+            # Office/document formats
+            '.pdf': self._extract_pdf,
+            '.doc': self._extract_office_via_libreoffice,
+            '.docx': self._extract_office_via_libreoffice,
+            '.ppt': self._extract_office_via_libreoffice,
+            '.pptx': self._extract_office_via_libreoffice,
+            '.xls': self._extract_office_via_libreoffice,
+            '.xlsx': self._extract_xlsx,
             
             # Standard document formats
             '.txt': self._extract_text,
@@ -143,6 +154,146 @@ class ContentExtractor:
     def _extract_hwp(self, file_path: str) -> Tuple[str, bool, Dict[str, Any]]:
         """Extract content from HWP/HWPX files"""
         return self.hwp_processor.extract_text(file_path)
+
+    def _extract_pdf(self, file_path: str) -> Tuple[str, bool, Dict[str, Any]]:
+        """Extract content from PDF files."""
+        try:
+            from PyPDF2 import PdfReader
+        except ImportError:
+            return self._extract_office_via_libreoffice(file_path)
+
+        try:
+            reader = PdfReader(file_path)
+            text_parts = []
+            for page in reader.pages:
+                page_text = page.extract_text() or ""
+                if page_text.strip():
+                    text_parts.append(page_text.strip())
+
+            metadata = {
+                "processor": "pypdf2",
+                "page_count": len(reader.pages),
+                "success": True,
+            }
+            pdf_meta = {}
+            raw_meta = getattr(reader, "metadata", None) or {}
+            for key, value in dict(raw_meta).items():
+                cleaned_key = str(key).lstrip("/")
+                cleaned_value = str(value).strip()
+                if cleaned_value:
+                    pdf_meta[cleaned_key] = cleaned_value
+            if pdf_meta:
+                metadata["pdf_metadata"] = pdf_meta
+
+            text = self._clean_text("\n\n".join(text_parts))
+            if text:
+                metadata["character_count"] = len(text)
+                return text, True, metadata
+
+            summary_parts = [f"PDF document with {len(reader.pages)} pages"]
+            for field in ("Title", "Author", "Subject", "Keywords"):
+                value = pdf_meta.get(field)
+                if value:
+                    summary_parts.append(f"{field}: {value}")
+            summary_text = self._clean_text(". ".join(summary_parts))
+            metadata["character_count"] = len(summary_text)
+            return summary_text, bool(summary_text), metadata
+        except Exception as e:
+            return "", False, {"error": str(e), "processor": "pypdf2"}
+
+    def _extract_xlsx(self, file_path: str) -> Tuple[str, bool, Dict[str, Any]]:
+        """Extract content from XLSX files with openpyxl."""
+        try:
+            import openpyxl
+        except ImportError:
+            return self._extract_office_via_libreoffice(file_path)
+
+        try:
+            workbook = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
+            text_parts = []
+            sheet_names = []
+
+            for sheet in workbook.worksheets:
+                sheet_names.append(sheet.title)
+                rows = []
+                for row in sheet.iter_rows(values_only=True):
+                    values = [str(cell).strip() for cell in row if cell not in (None, "")]
+                    if values:
+                        rows.append(" | ".join(values))
+                if rows:
+                    text_parts.append(f"[Sheet: {sheet.title}]\n" + "\n".join(rows))
+
+            metadata = {
+                "processor": "openpyxl",
+                "sheet_count": len(sheet_names),
+                "sheet_names": sheet_names,
+                "success": True,
+            }
+
+            text = self._clean_text("\n\n".join(text_parts))
+            if text:
+                metadata["character_count"] = len(text)
+                return text, True, metadata
+
+            summary_text = self._clean_text(
+                f"Excel workbook with {len(sheet_names)} sheets. " +
+                (f"Sheets: {', '.join(sheet_names)}" if sheet_names else "")
+            )
+            metadata["character_count"] = len(summary_text)
+            return summary_text, bool(summary_text), metadata
+        except Exception as e:
+            return self._extract_office_via_libreoffice(file_path, error_hint=str(e))
+
+    def _extract_office_via_libreoffice(self, file_path: str, error_hint: str = "") -> Tuple[str, bool, Dict[str, Any]]:
+        """Fallback office extractor using LibreOffice text conversion."""
+        file_path_obj = Path(file_path)
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                cmd = [
+                    "libreoffice",
+                    "--headless",
+                    "--convert-to", "txt:Text",
+                    "--outdir", temp_dir,
+                    file_path,
+                ]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                output_file = Path(temp_dir) / f"{file_path_obj.stem}.txt"
+                if result.returncode == 0 and output_file.exists():
+                    text = self._clean_text(output_file.read_text(encoding="utf-8", errors="ignore"))
+                    metadata = {
+                        "processor": "libreoffice",
+                        "source_format": file_path_obj.suffix.lower(),
+                        "success": bool(text),
+                        "character_count": len(text),
+                    }
+                    if text:
+                        return text, True, metadata
+
+                stderr = (result.stderr or "").strip()
+                error = stderr or error_hint or "LibreOffice conversion failed"
+                return "", False, {
+                    "error": error,
+                    "processor": "libreoffice",
+                    "source_format": file_path_obj.suffix.lower(),
+                }
+        except subprocess.TimeoutExpired:
+            return "", False, {
+                "error": "LibreOffice conversion timed out",
+                "processor": "libreoffice",
+                "source_format": file_path_obj.suffix.lower(),
+            }
+        except FileNotFoundError:
+            return "", False, {
+                "error": "LibreOffice not available",
+                "processor": "libreoffice",
+                "source_format": file_path_obj.suffix.lower(),
+            }
+        except Exception as e:
+            return "", False, {
+                "error": error_hint or str(e),
+                "processor": "libreoffice",
+                "source_format": file_path_obj.suffix.lower(),
+            }
     
     def _extract_text(self, file_path: str) -> Tuple[str, bool, Dict[str, Any]]:
         """Extract content from plain text files"""
